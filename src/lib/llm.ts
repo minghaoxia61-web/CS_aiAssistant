@@ -1,103 +1,79 @@
-// LLM 流式调用客户端 + 提示词构建器
-import type { ApiConfig, Material, QuizQuestion, QuizQuestionType } from '@/shared/types'
+// LLM 调用客户端 + 提示词构建器
+// 通过 IPC 转发到主进程发起请求，避免渲染进程 CORS 问题，且 API Key 不暴露到前端
+import type { ApiConfig, Material, QuizQuestion, QuizQuestionType, LlmMessage } from '@/shared/types'
 
 export interface StreamChatOptions {
   config: ApiConfig
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[]
+  messages: LlmMessage[]
   onToken: (token: string) => void
   signal?: AbortSignal
   temperature?: number
   maxTokens?: number
 }
 
-/** 流式调用 OpenAI 兼容接口，逐 token 回调 */
+/** 流式调用：通过主进程 IPC 转发，逐 token 回调 */
 export async function streamChat(opts: StreamChatOptions): Promise<string> {
   const { config, messages, onToken, signal, temperature, maxTokens } = opts
-  const url = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`
+  const requestId = await window.api.llmStream({ config, messages, temperature, maxTokens })
 
-  const body: Record<string, unknown> = {
-    model: config.model,
-    messages,
-    stream: true,
-    temperature: temperature ?? config.temperature,
-    max_tokens: maxTokens ?? config.maxTokens,
-    top_p: config.topP,
-  }
+  return new Promise<string>((resolve, reject) => {
+    let full = ''
+    let settled = false
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify(body),
-    signal,
-  })
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`API 请求失败 (${res.status})：${errText.slice(0, 300) || res.statusText}`)
-  }
-
-  if (!res.body) throw new Error('响应无内容流')
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  let full = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed || !trimmed.startsWith('data:')) continue
-      const data = trimmed.slice(5).trim()
-      if (data === '[DONE]') continue
-      try {
-        const json = JSON.parse(data)
-        const token = json.choices?.[0]?.delta?.content
-        if (token) {
-          full += token
-          onToken(token)
-        }
-      } catch {
-        // 忽略不完整 JSON
-      }
+    const cleanup = () => {
+      offToken()
+      offDone()
+      offError()
     }
-  }
-  return full
+
+    const offToken = window.api.onLlmToken((payload) => {
+      if (payload.requestId !== requestId || settled) return
+      full += payload.token
+      onToken(payload.token)
+    })
+
+    const offDone = window.api.onLlmDone((payload) => {
+      if (payload.requestId !== requestId || settled) return
+      settled = true
+      cleanup()
+      resolve(payload.full)
+    })
+
+    const offError = window.api.onLlmError((payload) => {
+      if (payload.requestId !== requestId || settled) return
+      settled = true
+      cleanup()
+      reject(new Error(payload.message))
+    })
+
+    // 支持中止
+    if (signal) {
+      if (signal.aborted) {
+        settled = true
+        cleanup()
+        window.api.llmAbort(requestId)
+        reject(new DOMException('Aborted', 'AbortError'))
+        return
+      }
+      signal.addEventListener(
+        'abort',
+        () => {
+          if (settled) return
+          window.api.llmAbort(requestId)
+        },
+        { once: true },
+      )
+    }
+  })
 }
 
 /** 非流式调用（用于结构化 JSON 输出，如出题/批改） */
 export async function chatJSON(opts: Omit<StreamChatOptions, 'onToken'>): Promise<string> {
   const { config, messages, signal, temperature, maxTokens } = opts
-  const url = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      stream: false,
-      temperature: temperature ?? config.temperature,
-      max_tokens: maxTokens ?? config.maxTokens,
-      top_p: config.topP,
-    }),
-    signal,
-  })
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`API 请求失败 (${res.status})：${errText.slice(0, 300) || res.statusText}`)
-  }
-  const json = await res.json()
-  return json.choices?.[0]?.message?.content || ''
+  const res = await window.api.llmJSON({ config, messages, temperature, maxTokens })
+  if (!res.ok) throw new Error(res.error)
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+  return res.content
 }
 
 // ---------- 上下文构建 ----------

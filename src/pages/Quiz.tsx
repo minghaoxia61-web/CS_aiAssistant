@@ -4,6 +4,7 @@ import { ListChecks, Sparkles, Loader2, Check, X, RotateCcw, ChevronRight, Chevr
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import { useStore } from '@/lib/store'
+import { confirmDialog } from '@/lib/dialog'
 import { chatJSON, buildContext, SYSTEM_PROMPTS, buildQuizPrompt, buildGradePrompt, extractJSON } from '@/lib/llm'
 import { formatTime, cn } from '@/lib/utils'
 import type { Material, QuizSession, QuizQuestion, QuizQuestionType } from '@/shared/types'
@@ -194,7 +195,7 @@ export default function Quiz() {
   }
 
   const handleDeleteHistory = async (id: string) => {
-    if (!window.confirm('删除该测验记录？')) return
+    if (!(await confirmDialog('删除该测验记录？', { danger: true }))) return
     await window.api.deleteQuizSession(id)
     if (report?.id === id) restart()
     refresh()
@@ -224,7 +225,7 @@ export default function Quiz() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧历史 */}
-        <div className="w-60 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-900/30">
+        <div className="w-60 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-850/40">
           <span className="label px-2">测验记录</span>
           <div className="space-y-1 mt-2">
             {history.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无记录</p>}
@@ -318,7 +319,7 @@ export default function Quiz() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-bone-muted bg-ink-900/50 rounded-lg px-3 py-2.5">
+                <div className="flex items-center gap-2 text-xs text-bone-muted bg-ink-850/60 rounded-lg px-3 py-2.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber" />
                   将基于 {readyMaterials.length} 份已就绪资料出题
                 </div>
@@ -385,7 +386,7 @@ export default function Quiz() {
                     className={cn(
                       'w-7 h-7 rounded-md text-xs font-mono transition-all',
                       i === currentIdx
-                        ? 'bg-amber text-ink-950'
+                        ? 'bg-amber text-white'
                         : answers[q.id]
                         ? 'bg-sage/20 text-sage-glow border border-sage/30'
                         : 'bg-ink-800 text-bone-faint border border-amber/10'
@@ -444,7 +445,7 @@ function QuestionCard({
                   'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all',
                   selected
                     ? 'border-amber/45 bg-amber/10 text-bone'
-                    : 'border-amber/12 bg-ink-900/40 text-bone-dim hover:border-amber/25 hover:bg-ink-800/50'
+                    : 'border-amber/12 bg-ink-850/50 text-bone-dim hover:border-amber/25 hover:bg-ink-800/50'
                 )}
                 onClick={() => {
                   if (question.type === 'single') {
@@ -459,7 +460,7 @@ function QuestionCard({
                 <span
                   className={cn(
                     'w-6 h-6 rounded-md border flex items-center justify-center text-xs font-mono shrink-0',
-                    selected ? 'bg-amber border-amber text-ink-950' : 'border-amber/25 text-bone-muted'
+                    selected ? 'bg-amber border-amber text-white' : 'border-amber/25 text-bone-muted'
                   )}
                 >
                   {letter}
@@ -569,7 +570,7 @@ function ReportView({ session, onRestart }: { session: QuizSession; onRestart: (
                   <span className="text-sage-glow">{q.answer}</span>
                 </div>
                 {q.explanation && (
-                  <div className="mt-2 text-sm text-bone-dim bg-ink-900/50 rounded-lg px-3 py-2">
+                  <div className="mt-2 text-sm text-bone-dim bg-ink-850/60 rounded-lg px-3 py-2">
                     <span className="text-amber-dim font-medium">解析：</span>
                     {q.explanation}
                   </div>
@@ -590,7 +591,7 @@ function ScoreRing({ pct }: { pct: number }) {
   return (
     <div className="relative w-24 h-24 shrink-0">
       <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(232,185,116,0.12)" strokeWidth="6" />
+        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(184,134,11,0.15)" strokeWidth="6" />
         <circle
           cx="48"
           cy="48"

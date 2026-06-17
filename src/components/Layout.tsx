@@ -7,12 +7,12 @@ import { useStore, hasConfig } from '@/lib/store'
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { config, configLoaded, loadConfig, loadSubjects } = useStore()
+  const { config, configLoaded, loadConfigs, loadSubjects } = useStore()
 
   useEffect(() => {
-    loadConfig()
+    loadConfigs()
     loadSubjects()
-  }, [loadConfig, loadSubjects])
+  }, [loadConfigs, loadSubjects])
 
   // 配置加载后，若无 API Key 且不在设置页，跳转设置
   useEffect(() => {

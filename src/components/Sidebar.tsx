@@ -2,6 +2,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Settings, Library, MessagesSquare, BookOpen, ListChecks, GraduationCap } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -16,12 +17,12 @@ export default function Sidebar() {
   const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject } = useStore()
 
   return (
-    <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-900/40 backdrop-blur-xl">
+    <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-850/50 backdrop-blur-xl">
       {/* 品牌 */}
       <div className="px-5 pt-6 pb-5 border-b border-amber/8">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber to-amber-dim flex items-center justify-center shadow-glow">
-            <GraduationCap className="w-5 h-5 text-ink-950" strokeWidth={2.2} />
+            <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} />
           </div>
           <div>
             <h1 className="font-display text-xl leading-none text-bone">CS_Assistant</h1>
@@ -57,7 +58,7 @@ export default function Sidebar() {
         <button
           className="text-bone-muted hover:text-amber transition-colors text-lg leading-none"
           onClick={async () => {
-            const name = window.prompt('请输入科目名称（如：操作系统）')
+            const name = await promptDialog('请输入科目名称（如：操作系统）', { placeholder: '操作系统' })
             if (name?.trim()) {
               await createSubject(name.trim(), '#e8b974')
             }
@@ -89,9 +90,10 @@ export default function Sidebar() {
             </span>
             <button
               className="opacity-0 group-hover:opacity-100 text-bone-faint hover:text-rust transition-all text-xs"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation()
-                if (window.confirm(`确认删除科目「${s.name}」及其所有资料？`)) {
+                const ok = await confirmDialog(`确认删除科目「${s.name}」及其所有资料？`, { danger: true })
+                if (ok) {
                   deleteSubject(s.id)
                 }
               }}

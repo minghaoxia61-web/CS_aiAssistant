@@ -5,6 +5,7 @@ import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
 import { useStore } from '@/lib/store'
+import { confirmDialog } from '@/lib/dialog'
 import { streamChat, buildContext, SYSTEM_PROMPTS } from '@/lib/llm'
 import { formatTime, cn } from '@/lib/utils'
 import type { ChatSession, ChatMessage, Material } from '@/shared/types'
@@ -99,11 +100,12 @@ export default function Chat() {
 
   const send = async (text: string) => {
     if (!text.trim() || streaming || !config?.apiKey) return
-    if (!currentSession) {
-      handleNewChat()
-      return
+    // 没有会话时自动创建一个，并继续发送（不再 return 丢消息）
+    let session = currentSession
+    if (!session) {
+      session = newSession()
+      setCurrentSession(session)
     }
-    const session = currentSession
     const userMsg: ChatMessage = {
       id: uuidv4(),
       session_id: session.id,
@@ -185,7 +187,7 @@ export default function Chat() {
   const stop = () => abortRef.current?.abort()
 
   const handleDeleteSession = async (id: string) => {
-    if (!window.confirm('删除该对话？')) return
+    if (!(await confirmDialog('删除该对话？', { danger: true }))) return
     await window.api.deleteChatSession(id)
     setSessions((prev) => prev.filter((s) => s.id !== id))
     if (currentSession?.id === id) setCurrentSession(null)
@@ -219,7 +221,7 @@ export default function Chat() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧：会话 + 上下文 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 flex flex-col bg-ink-900/30">
+        <div className="w-64 shrink-0 border-r border-amber/8 flex flex-col bg-ink-850/40">
           {/* 会话历史 */}
           <div className="flex-1 overflow-y-auto px-3 py-4">
             <div className="flex items-center gap-2 px-2 mb-2 text-bone-muted">
@@ -320,7 +322,7 @@ export default function Chat() {
           </div>
 
           {/* 输入区 */}
-          <div className="border-t border-amber/8 px-8 py-4 bg-ink-900/30">
+          <div className="border-t border-amber/8 px-8 py-4 bg-ink-850/40">
             <div className="max-w-3xl mx-auto">
               <div className="flex items-end gap-2 bg-ink-850/80 border border-amber/12 rounded-2xl p-2 focus-within:border-amber/35 transition-colors">
                 <textarea
@@ -377,7 +379,7 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
       <div
         className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-medium',
-          isUser ? 'bg-amber text-ink-950' : 'bg-sage/20 text-sage-glow border border-sage/25'
+          isUser ? 'bg-amber text-white' : 'bg-sage/20 text-sage-glow border border-sage/25'
         )}
       >
         {isUser ? '我' : 'AI'}

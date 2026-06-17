@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -17,14 +17,14 @@ body,
 body {
   margin: 0;
   font-family: 'Geist', 'Inter', system-ui, sans-serif;
-  background-color: #0f0e0c;
+  background-color: #f5f4f0;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 185, 116, 0.08), transparent 60%),
-    linear-gradient(rgba(232, 185, 116, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232, 185, 116, 0.022) 1px, transparent 1px);
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(184, 134, 11, 0.05), transparent 60%),
+    linear-gradient(rgba(184, 134, 11, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 134, 11, 0.025) 1px, transparent 1px);
   background-size: 100% 100%, 32px 32px, 32px 32px;
   background-attachment: fixed;
-  color: #e8e4dc;
+  color: #2d2a24;
   line-height: 1.6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -43,8 +43,8 @@ textarea,
 }
 
 ::selection {
-  background: rgba(232, 185, 116, 0.3);
-  color: #f5d49a;
+  background: rgba(184, 134, 11, 0.2);
+  color: #8a6508;
 }
 
 /* 滚动条 */
@@ -56,80 +56,86 @@ textarea,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(232, 185, 116, 0.18);
+  background: rgba(184, 134, 11, 0.2);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(232, 185, 116, 0.32);
+  background: rgba(184, 134, 11, 0.35);
   background-clip: content-box;
 }
 
 /* 玻璃面板 */
 @layer components {
   .glass {
-    background-color: rgba(26, 24, 22, 0.7);
+    background-color: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(232, 185, 116, 0.1);
+    border: 1px solid rgba(184, 134, 11, 0.12);
   }
   .glass-strong {
-    background-color: rgba(33, 31, 28, 0.8);
+    background-color: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(232, 185, 116, 0.12);
+    border: 1px solid rgba(184, 134, 11, 0.15);
   }
   .panel {
-    background-color: rgba(26, 24, 22, 0.6);
-    border: 1px solid rgba(232, 185, 116, 0.08);
+    background-color: #ffffff;
+    border: 1px solid rgba(184, 134, 11, 0.1);
     border-radius: 1rem;
+    box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.05);
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer select-none;
   }
   .btn-primary {
-    @apply btn text-ink-950;
-    background-color: #e8b974;
+    @apply btn text-white;
+    background-color: #b8860b;
   }
   .btn-primary:hover {
-    background-color: #f5d49a;
-    box-shadow: 0 0 24px -4px rgba(232, 185, 116, 0.25);
+    background-color: #d4a017;
+    box-shadow: 0 0 24px -4px rgba(184, 134, 11, 0.3);
   }
   .btn-ghost {
     @apply btn transition-colors;
-    color: #b8b2a6;
+    color: #5c574f;
   }
   .btn-ghost:hover {
-    color: #e8e4dc;
-    background-color: rgba(232, 185, 116, 0.08);
+    color: #2d2a24;
+    background-color: rgba(184, 134, 11, 0.08);
   }
   .btn-outline {
     @apply btn transition-colors;
-    color: #e8b974;
-    border: 1px solid rgba(232, 185, 116, 0.25);
+    color: #8a6508;
+    border: 1px solid rgba(184, 134, 11, 0.3);
   }
   .btn-outline:hover {
-    background-color: rgba(232, 185, 116, 0.1);
-    border-color: rgba(232, 185, 116, 0.4);
+    background-color: rgba(184, 134, 11, 0.08);
+    border-color: rgba(184, 134, 11, 0.5);
+  }
+  .btn-outline:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .input {
     @apply w-full rounded-lg px-3.5 py-2.5 text-bone transition-colors;
-    background-color: rgba(22, 20, 15, 0.8);
-    border: 1px solid rgba(232, 185, 116, 0.12);
+    background-color: #ffffff;
+    border: 1px solid rgba(184, 134, 11, 0.15);
   }
   .input::placeholder {
-    color: #5c574f;
+    color: #8a857c;
   }
   .input:focus {
     outline: none;
-    border-color: rgba(232, 185, 116, 0.45);
-    box-shadow: 0 0 0 1px rgba(232, 185, 116, 0.3);
+    border-color: rgba(184, 134, 11, 0.5);
+    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.12);
   }
   .chip {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer;
+    border: 1px solid rgba(184, 134, 11, 0.2);
   }
   .label {
     @apply text-xs font-medium uppercase tracking-wider mb-2 block;
-    color: #8a8580;
+    color: #6b665e;
   }
 }
 
@@ -142,7 +148,7 @@ textarea,
 
 /* ---------- Markdown 渲染样式 ---------- */
 .prose {
-  color: #e8e4dc;
+  color: #2d2a24;
   line-height: 1.75;
   font-size: 0.95rem;
 }
@@ -151,7 +157,7 @@ textarea,
 .prose h3,
 .prose h4 {
   font-family: 'Instrument Serif', Georgia, serif;
-  color: #f5d49a;
+  color: #8a6508;
   font-weight: 400;
   margin-top: 1.4em;
   margin-bottom: 0.6em;
@@ -160,36 +166,38 @@ textarea,
 .prose h1 { font-size: 1.6rem; }
 .prose h2 { font-size: 1.35rem; }
 .prose h3 { font-size: 1.15rem; }
-.prose h4 { font-size: 1rem; font-family: 'Geist', sans-serif; font-weight: 600; color: #e8b974; }
+.prose h4 { font-size: 1rem; font-family: 'Geist', sans-serif; font-weight: 600; color: #b8860b; }
 .prose p { margin: 0.7em 0; }
 .prose ul,
 .prose ol { margin: 0.7em 0; padding-left: 1.5em; }
 .prose ul { list-style: disc; }
 .prose ol { list-style: decimal; }
 .prose li { margin: 0.3em 0; }
-.prose li::marker { color: #e8b974; }
-.prose strong { color: #f5d49a; font-weight: 600; }
-.prose em { color: #a8c4a4; }
-.prose a { color: #e8b974; text-decoration: underline; text-underline-offset: 2px; }
-.prose a:hover { color: #f5d49a; }
+.prose li::marker { color: #b8860b; }
+.prose strong { color: #8a6508; font-weight: 600; }
+.prose em { color: #4a7a46; }
+.prose a { color: #b8860b; text-decoration: underline; text-underline-offset: 2px; }
+.prose a:hover { color: #d4a017; }
 .prose blockquote {
-  border-left: 3px solid rgba(232, 185, 116, 0.5);
+  border-left: 3px solid rgba(184, 134, 11, 0.4);
   padding: 0.2em 0 0.2em 1em;
   margin: 0.9em 0;
-  color: #b8b2a6;
+  color: #5c574f;
   font-style: italic;
+  background: rgba(184, 134, 11, 0.03);
+  border-radius: 0 6px 6px 0;
 }
 .prose code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85em;
-  background: rgba(232, 185, 116, 0.1);
-  color: #f5d49a;
+  background: rgba(184, 134, 11, 0.1);
+  color: #8a6508;
   padding: 0.15em 0.4em;
   border-radius: 4px;
 }
 .prose pre {
-  background: #16140f !important;
-  border: 1px solid rgba(232, 185, 116, 0.12);
+  background: #faf9f6 !important;
+  border: 1px solid rgba(184, 134, 11, 0.15);
   border-radius: 10px;
   padding: 1em 1.2em;
   overflow-x: auto;
@@ -197,7 +205,7 @@ textarea,
 }
 .prose pre code {
   background: transparent;
-  color: #e8e4dc;
+  color: #2d2a24;
   padding: 0;
   font-size: 0.85rem;
   line-height: 1.6;
@@ -210,38 +218,38 @@ textarea,
 }
 .prose th,
 .prose td {
-  border: 1px solid rgba(232, 185, 116, 0.15);
+  border: 1px solid rgba(184, 134, 11, 0.18);
   padding: 0.5em 0.8em;
   text-align: left;
 }
 .prose th {
-  background: rgba(232, 185, 116, 0.08);
-  color: #f5d49a;
+  background: rgba(184, 134, 11, 0.06);
+  color: #8a6508;
   font-weight: 600;
 }
 .prose hr {
   border: none;
-  border-top: 1px solid rgba(232, 185, 116, 0.15);
+  border-top: 1px solid rgba(184, 134, 11, 0.18);
   margin: 1.5em 0;
 }
 
-/* 代码高亮（rehype-highlight 主题） */
-.hljs { color: #e8e4dc; background: transparent; }
+/* 代码高亮（rehype-highlight 浅色主题） */
+.hljs { color: #2d2a24; background: transparent; }
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-built_in { color: #e8b974; }
+.hljs-built_in { color: #b8860b; }
 .hljs-string,
-.hljs-attr { color: #a8c4a4; }
+.hljs-attr { color: #4a7a46; }
 .hljs-number,
-.hljs-literal { color: #d4a574; }
-.hljs-comment { color: #5c574f; font-style: italic; }
+.hljs-literal { color: #c8964a; }
+.hljs-comment { color: #8a857c; font-style: italic; }
 .hljs-function .hljs-title,
-.hljs-title.function_ { color: #f5d49a; }
+.hljs-title.function_ { color: #8a6508; }
 .hljs-variable,
-.hljs-template-variable { color: #c87555; }
+.hljs-template-variable { color: #b8553a; }
 .hljs-type,
-.hljs-class .hljs-title { color: #8ba888; }
-.hljs-meta { color: #8a8580; }
+.hljs-class .hljs-title { color: #5a8a56; }
+.hljs-meta { color: #6b665e; }
 
 /* 速记卡翻转 */
 .flip-card {
@@ -272,7 +280,7 @@ textarea,
 .stream-cursor::after {
   content: '▋';
   display: inline-block;
-  color: #e8b974;
+  color: #b8860b;
   animation: blink 1s step-end infinite;
   margin-left: 2px;
 }

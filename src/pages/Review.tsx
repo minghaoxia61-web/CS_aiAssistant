@@ -1,16 +1,15 @@
 // 复习中心页：生成总结 / 大纲 / 速记卡
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Loader2, Download, RefreshCw } from 'lucide-react'
+// 生成状态提升到全局 store，切换页面不打断生成
+import { useEffect, useState, useCallback } from 'react'
+import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Download, RefreshCw } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
 import { useStore } from '@/lib/store'
-import { streamChat, chatJSON, buildContext, SYSTEM_PROMPTS, extractJSON } from '@/lib/llm'
+import { useReviewStore } from '@/lib/review-store'
+import { confirmDialog } from '@/lib/dialog'
 import { formatTime, cn } from '@/lib/utils'
 import type { Material, ReviewDoc, ReviewDocType } from '@/shared/types'
-import { v4 as uuidv4 } from 'uuid'
-
-interface Flashcard { q: string; a: string }
 
 const GEN_TYPES: { type: ReviewDocType; label: string; desc: string; icon: typeof FileText }[] = [
   { type: 'summary', label: '章节总结', desc: '结构化梳理核心知识点', icon: FileText },
@@ -20,17 +19,15 @@ const GEN_TYPES: { type: ReviewDocType; label: string; desc: string; icon: typeo
 
 export default function Review() {
   const { subjects, currentSubjectId, config } = useStore()
+  const {
+    generating, generatingType, streamText, currentDoc, flashcards, error,
+    generate, openDoc, clearError, resetView,
+  } = useReviewStore()
+
   const [materials, setMaterials] = useState<Material[]>([])
   const [docs, setDocs] = useState<ReviewDoc[]>([])
   const [selectedMatIds, setSelectedMatIds] = useState<Set<string>>(new Set())
-  const [generating, setGenerating] = useState(false)
-  const [currentDoc, setCurrentDoc] = useState<ReviewDoc | null>(null)
-  const [streamText, setStreamText] = useState('')
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([])
-  const [flippedIdx, setFlippedIdx] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
-  const [error, setError] = useState('')
-  const abortRef = useRef<AbortController | null>(null)
 
   const subject = subjects.find((s) => s.id === currentSubjectId)
 
@@ -46,10 +43,8 @@ export default function Review() {
 
   useEffect(() => {
     refresh()
-    setCurrentDoc(null)
-    setStreamText('')
-    setFlashcards([])
-  }, [refresh])
+    resetView()
+  }, [refresh, resetView])
 
   const readyMaterials = materials.filter((m) => m.status === 'ready')
 
@@ -67,97 +62,20 @@ export default function Review() {
     else setSelectedMatIds(new Set(readyMaterials.map((m) => m.id)))
   }
 
-  const generate = async (type: ReviewDocType) => {
+  const handleGenerate = (type: ReviewDocType) => {
     if (!config?.apiKey || !currentSubjectId) return
     const ctxMaterials = readyMaterials.filter((m) => selectedMatIds.has(m.id))
     if (ctxMaterials.length === 0) {
-      setError('请至少选择一份资料')
+      useReviewStore.setState({ error: '请至少选择一份资料' })
       return
     }
-    setError('')
-    setGenerating(true)
-    setStreamText('')
-    setFlashcards([])
-    setCurrentDoc(null)
-    abortRef.current = new AbortController()
-
-    const context = buildContext(ctxMaterials)
-    const userContent = `以下是课程资料，请基于这些内容生成${type === 'summary' ? '章节总结' : type === 'outline' ? '复习大纲' : '速记卡片'}：\n${context}`
-
-    try {
-      if (type === 'flashcards') {
-        const raw = await chatJSON({
-          config,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPTS.flashcards },
-            { role: 'user', content: userContent },
-          ],
-          signal: abortRef.current.signal,
-          temperature: 0.5,
-        })
-        const arr = extractJSON(raw) as Flashcard[]
-        setFlashcards(arr)
-        const doc: ReviewDoc = {
-          id: uuidv4(),
-          subject_id: currentSubjectId,
-          type,
-          title: `速记卡片 · ${formatTime(Date.now())}`,
-          content: JSON.stringify(arr),
-          created_at: Date.now(),
-        }
-        await window.api.saveReviewDoc(doc)
-        setCurrentDoc(doc)
-        refresh()
-      } else {
-        const prompt = type === 'summary' ? SYSTEM_PROMPTS.summary : SYSTEM_PROMPTS.outline
-        let acc = ''
-        await streamChat({
-          config,
-          messages: [
-            { role: 'system', content: prompt },
-            { role: 'user', content: userContent },
-          ],
-          signal: abortRef.current.signal,
-          onToken: (t) => {
-            acc += t
-            setStreamText(acc)
-          },
-        })
-        const doc: ReviewDoc = {
-          id: uuidv4(),
-          subject_id: currentSubjectId,
-          type,
-          title: `${type === 'summary' ? '章节总结' : '复习大纲'} · ${formatTime(Date.now())}`,
-          content: acc,
-          created_at: Date.now(),
-        }
-        await window.api.saveReviewDoc(doc)
-        setCurrentDoc(doc)
-        refresh()
-      }
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setGenerating(false)
-      abortRef.current = null
-    }
-  }
-
-  const openDoc = (doc: ReviewDoc) => {
-    setCurrentDoc(doc)
-    setStreamText(doc.type === 'flashcards' ? '' : doc.content)
-    setFlashcards(doc.type === 'flashcards' ? (safeParse(doc.content)) : [])
-    setError('')
+    generate(type, ctxMaterials, config, currentSubjectId)
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('删除该复习资料？')) return
+    if (!(await confirmDialog('删除该复习资料？', { danger: true }))) return
     await window.api.deleteReviewDoc(id)
-    if (currentDoc?.id === id) {
-      setCurrentDoc(null)
-      setStreamText('')
-      setFlashcards([])
-    }
+    if (currentDoc?.id === id) resetView()
     refresh()
   }
 
@@ -193,7 +111,7 @@ export default function Review() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧历史 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-900/30">
+        <div className="w-64 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-850/40">
           <span className="label px-2">已生成资料</span>
           <div className="space-y-1 mt-2">
             {docs.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无生成记录</p>}
@@ -208,7 +126,7 @@ export default function Review() {
                   )}
                   onClick={() => openDoc(d)}
                 >
-                  <meta.icon className="w-4 h-4 shrink-0" />
+                  {meta && <meta.icon className="w-4 h-4 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate">{d.title}</div>
                     <div className="text-[10px] text-bone-faint">{formatTime(d.created_at)}</div>
@@ -264,9 +182,9 @@ export default function Review() {
                   key={t.type}
                   className="btn-outline group"
                   disabled={generating}
-                  onClick={() => generate(t.type)}
+                  onClick={() => handleGenerate(t.type)}
                 >
-                  {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <t.icon className="w-4 h-4" />}
+                  <t.icon className={cn('w-4 h-4', generating && generatingType === t.type && 'opacity-50')} />
                   生成{t.label}
                 </button>
               ))}
@@ -274,10 +192,11 @@ export default function Review() {
             {error && <p className="text-xs text-rust mt-3">{error}</p>}
           </div>
 
-          {/* 生成结果 */}
-          {generating && !currentDoc && streamText === '' && (
-            <div className="flex items-center justify-center py-16 text-bone-muted">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" /> AI 正在生成...
+          {/* 生成中提示（独立于按钮，切换页面后仍可见） */}
+          {generating && !currentDoc && streamText === '' && flashcards.length === 0 && (
+            <div className="flex items-center justify-center py-16 text-bone-muted animate-pulse-soft">
+              <Sparkles className="w-5 h-5 mr-2 text-amber" />
+              AI 正在生成{generatingType === 'summary' ? '章节总结' : generatingType === 'outline' ? '复习大纲' : '速记卡片'}...
             </div>
           )}
 
@@ -309,23 +228,7 @@ export default function Review() {
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {flashcards.map((card, i) => (
-                  <div
-                    key={i}
-                    className={cn('flip-card h-44 cursor-pointer', flippedIdx === i && 'flipped')}
-                    onClick={() => setFlippedIdx(flippedIdx === i ? null : i)}
-                  >
-                    <div className="flip-card-inner">
-                      <div className="flip-card-front rounded-2xl bg-ink-850/70 border border-amber/15 p-5 flex flex-col">
-                        <span className="text-[10px] uppercase tracking-wider text-amber-dim mb-2">问题 {i + 1}</span>
-                        <p className="text-sm text-bone leading-relaxed flex-1">{card.q}</p>
-                        <span className="text-[10px] text-bone-faint mt-2">点击翻转查看答案</span>
-                      </div>
-                      <div className="flip-card-back rounded-2xl bg-sage/10 border border-sage/25 p-5 flex flex-col">
-                        <span className="text-[10px] uppercase tracking-wider text-sage-glow mb-2">答案</span>
-                        <p className="text-sm text-bone leading-relaxed flex-1 overflow-y-auto">{card.a}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <FlipCard key={i} index={i} card={card} />
                 ))}
               </div>
             </div>
@@ -344,10 +247,25 @@ export default function Review() {
   )
 }
 
-function safeParse(s: string): Flashcard[] {
-  try {
-    return JSON.parse(s) as Flashcard[]
-  } catch {
-    return []
-  }
+// 速记卡翻转组件（独立出来避免重渲染整个列表）
+function FlipCard({ index, card }: { index: number; card: { q: string; a: string } }) {
+  const [flipped, setFlipped] = useState(false)
+  return (
+    <div
+      className={cn('flip-card h-44 cursor-pointer', flipped && 'flipped')}
+      onClick={() => setFlipped(!flipped)}
+    >
+      <div className="flip-card-inner">
+        <div className="flip-card-front rounded-2xl bg-ink-850/70 border border-amber/15 p-5 flex flex-col">
+          <span className="text-[10px] uppercase tracking-wider text-amber-dim mb-2">问题 {index + 1}</span>
+          <p className="text-sm text-bone leading-relaxed flex-1">{card.q}</p>
+          <span className="text-[10px] text-bone-faint mt-2">点击翻转查看答案</span>
+        </div>
+        <div className="flip-card-back rounded-2xl bg-sage/10 border border-sage/25 p-5 flex flex-col">
+          <span className="text-[10px] uppercase tracking-wider text-sage-glow mb-2">答案</span>
+          <p className="text-sm text-bone leading-relaxed flex-1 overflow-y-auto">{card.a}</p>
+        </div>
+      </div>
+    </div>
+  )
 }

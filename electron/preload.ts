@@ -1,11 +1,16 @@
 // Preload 脚本：通过 contextBridge 暴露安全 IPC API
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, type FileFilter } from '../src/shared/types';
+import { IPC, type FileFilter, type LlmStreamOptions, type LlmTokenEvent, type LlmDoneEvent, type LlmErrorEvent, type ApiConfigItem, type ApiConfig } from '../src/shared/types';
 
 const api = {
   // 配置
   getConfig: () => ipcRenderer.invoke(IPC.GET_CONFIG),
-  saveConfig: (cfg: unknown) => ipcRenderer.invoke(IPC.SAVE_CONFIG, cfg),
+  saveConfig: (cfg: ApiConfig) => ipcRenderer.invoke(IPC.SAVE_CONFIG, cfg),
+  listConfigs: () => ipcRenderer.invoke(IPC.LIST_CONFIGS) as Promise<ApiConfigItem[]>,
+  saveConfigItem: (item: Partial<ApiConfigItem> & { id?: string }) =>
+    ipcRenderer.invoke(IPC.SAVE_CONFIG_ITEM, item) as Promise<ApiConfigItem>,
+  deleteConfigItem: (id: string) => ipcRenderer.invoke(IPC.DELETE_CONFIG_ITEM, id),
+  setActiveConfig: (id: string) => ipcRenderer.invoke(IPC.SET_ACTIVE_CONFIG, id) as Promise<ApiConfig>,
 
   // 科目
   listSubjects: () => ipcRenderer.invoke(IPC.LIST_SUBJECTS),
@@ -38,6 +43,27 @@ const api = {
   saveQuizSession: (session: unknown) => ipcRenderer.invoke(IPC.SAVE_QUIZ_SESSION, session),
   listQuizSessions: (subjectId: string) => ipcRenderer.invoke(IPC.LIST_QUIZ_SESSIONS, subjectId),
   deleteQuizSession: (id: string) => ipcRenderer.invoke(IPC.DELETE_QUIZ_SESSION, id),
+
+  // LLM 调用（主进程转发）
+  llmStream: (opts: LlmStreamOptions) => ipcRenderer.invoke(IPC.LLM_STREAM, opts),
+  llmAbort: (requestId: string) => ipcRenderer.invoke(IPC.LLM_ABORT, requestId),
+  llmJSON: (opts: LlmStreamOptions) =>
+    ipcRenderer.invoke(IPC.LLM_JSON, opts) as Promise<{ ok: true; content: string } | { ok: false; error: string }>,
+  onLlmToken: (cb: (payload: LlmTokenEvent) => void) => {
+    const handler = (_e: unknown, payload: LlmTokenEvent) => cb(payload);
+    ipcRenderer.on('llm:token', handler);
+    return () => ipcRenderer.removeListener('llm:token', handler);
+  },
+  onLlmDone: (cb: (payload: LlmDoneEvent) => void) => {
+    const handler = (_e: unknown, payload: LlmDoneEvent) => cb(payload);
+    ipcRenderer.on('llm:done', handler);
+    return () => ipcRenderer.removeListener('llm:done', handler);
+  },
+  onLlmError: (cb: (payload: LlmErrorEvent) => void) => {
+    const handler = (_e: unknown, payload: LlmErrorEvent) => cb(payload);
+    ipcRenderer.on('llm:error', handler);
+    return () => ipcRenderer.removeListener('llm:error', handler);
+  },
 
   // 系统
   pickFiles: (filters?: FileFilter[]) => ipcRenderer.invoke(IPC.PICK_FILES, filters),

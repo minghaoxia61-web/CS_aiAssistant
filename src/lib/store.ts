@@ -1,13 +1,19 @@
 // 全局状态管理（Zustand）
 import { create } from 'zustand'
-import type { ApiConfig, Subject } from '@/shared/types'
+import type { ApiConfig, ApiConfigItem, Subject } from '@/shared/types'
 
 interface AppState {
   // 配置
   config: ApiConfig | null
   configLoaded: boolean
+  configs: ApiConfigItem[]
+  activeConfigId: string | null
   loadConfig: () => Promise<void>
   saveConfig: (cfg: ApiConfig) => Promise<void>
+  loadConfigs: () => Promise<void>
+  saveConfigItem: (item: Partial<ApiConfigItem> & { id?: string }) => Promise<ApiConfigItem>
+  deleteConfigItem: (id: string) => Promise<void>
+  switchConfig: (id: string) => Promise<void>
 
   // 科目
   subjects: Subject[]
@@ -21,6 +27,8 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   config: null,
   configLoaded: false,
+  configs: [],
+  activeConfigId: null,
 
   async loadConfig() {
     const cfg = await window.api.getConfig()
@@ -30,6 +38,32 @@ export const useStore = create<AppState>((set, get) => ({
   async saveConfig(cfg) {
     await window.api.saveConfig(cfg)
     set({ config: cfg })
+  },
+
+  async loadConfigs() {
+    const configs = await window.api.listConfigs()
+    const cfg = await window.api.getConfig()
+    set({ configs, config: cfg, configLoaded: true })
+  },
+
+  async saveConfigItem(item) {
+    const saved = await window.api.saveConfigItem(item)
+    const configs = await window.api.listConfigs()
+    const cfg = await window.api.getConfig()
+    set({ configs, config: cfg })
+    return saved
+  },
+
+  async deleteConfigItem(id) {
+    await window.api.deleteConfigItem(id)
+    const configs = await window.api.listConfigs()
+    const cfg = await window.api.getConfig()
+    set({ configs, config: cfg })
+  },
+
+  async switchConfig(id) {
+    const cfg = await window.api.setActiveConfig(id)
+    set({ config: cfg, activeConfigId: id })
   },
 
   subjects: [],

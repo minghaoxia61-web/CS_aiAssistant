@@ -4,6 +4,7 @@ import { Library as LibraryIcon, Upload, FileText, Trash2, Loader2, CheckCircle2
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import { useStore } from '@/lib/store'
+import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { formatBytes, formatTime } from '@/lib/utils'
 import type { Material } from '@/shared/types'
 
@@ -57,7 +58,7 @@ export default function Library() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('确认删除该资料？')) return
+    if (!(await confirmDialog('确认删除该资料？', { danger: true }))) return
     await window.api.deleteMaterial(id)
     refresh()
   }
@@ -74,7 +75,7 @@ export default function Library() {
             <button
               className="btn-primary"
               onClick={async () => {
-                const name = window.prompt('请输入科目名称')
+                const name = await promptDialog('请输入科目名称', { placeholder: '操作系统' })
                 if (name?.trim()) await createSubject(name.trim(), '#e8b974')
               }}
             >
@@ -172,7 +173,7 @@ export default function Library() {
       {/* 预览弹层 */}
       {preview && (
         <div
-          className="fixed inset-0 z-50 bg-ink-950/70 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in"
           onClick={() => setPreview(null)}
         >
           <div

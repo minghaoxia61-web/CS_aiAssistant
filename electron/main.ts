@@ -13,7 +13,7 @@ function createWindow(): void {
     minWidth: 1024,
     minHeight: 680,
     show: false,
-    backgroundColor: '#0f0e0c',
+    backgroundColor: '#f5f4f0',
     title: 'CS_Assistant',
     autoHideMenuBar: true,
     webPreferences: {

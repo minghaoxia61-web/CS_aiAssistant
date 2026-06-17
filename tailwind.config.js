@@ -9,40 +9,40 @@ export default {
     },
     extend: {
       colors: {
-        // 温暖深炭色背景
+        // 温暖浅色背景
         ink: {
-          950: "#0f0e0c",
-          900: "#16140f",
-          850: "#1a1816",
-          800: "#211f1c",
-          750: "#272420",
-          700: "#2f2b27",
-          600: "#3a352f",
-          500: "#4a443c",
+          950: "#f5f4f0",
+          900: "#ffffff",
+          850: "#efede8",
+          800: "#e6e3dc",
+          750: "#dad6cc",
+          700: "#ccc8bc",
+          600: "#b5b0a2",
+          500: "#9a948a",
         },
-        // 琥珀金主色
+        // 琥珀金主色（浅色背景下加深以保证对比度）
         amber: {
-          DEFAULT: "#e8b974",
-          soft: "#d4a574",
-          dim: "#a8814f",
-          glow: "#f5d49a",
+          DEFAULT: "#b8860b",
+          soft: "#c8964a",
+          dim: "#8a6508",
+          glow: "#d4a017",
         },
         // 鼠尾草绿辅色
         sage: {
-          DEFAULT: "#8ba888",
-          dim: "#6b8268",
-          glow: "#a8c4a4",
+          DEFAULT: "#5a8a56",
+          dim: "#4a7a46",
+          glow: "#6a9a66",
         },
-        // 文本
+        // 文本（深色）
         bone: {
-          DEFAULT: "#e8e4dc",
-          dim: "#b8b2a6",
-          muted: "#8a8580",
-          faint: "#5c574f",
+          DEFAULT: "#2d2a24",
+          dim: "#5c574f",
+          muted: "#6b665e",
+          faint: "#8a857c",
         },
         // 状态
-        rust: "#c87555",
-        moss: "#7a9a6b",
+        rust: "#b8553a",
+        moss: "#5a8a56",
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],
@@ -50,15 +50,15 @@ export default {
         mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
       },
       boxShadow: {
-        glow: '0 0 24px -4px rgba(232, 185, 116, 0.25)',
-        'glow-sage': '0 0 24px -4px rgba(139, 168, 136, 0.2)',
-        panel: '0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.4)',
+        glow: '0 0 24px -4px rgba(184, 134, 11, 0.2)',
+        'glow-sage': '0 0 24px -4px rgba(90, 138, 86, 0.18)',
+        panel: '0 4px 24px -8px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.05)',
       },
       backgroundImage: {
         'grid-faint':
-          'linear-gradient(rgba(232,185,116,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(232,185,116,0.025) 1px, transparent 1px)',
+          'linear-gradient(rgba(184,134,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(184,134,11,0.03) 1px, transparent 1px)',
         'radial-glow':
-          'radial-gradient(ellipse at top, rgba(232,185,116,0.08), transparent 60%)',
+          'radial-gradient(ellipse at top, rgba(184,134,11,0.06), transparent 60%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',

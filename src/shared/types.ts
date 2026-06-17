@@ -9,6 +9,13 @@ export interface ApiConfig {
   topP: number;
 }
 
+// 带元信息的 API 配置项（用于多配置管理）
+export interface ApiConfigItem extends ApiConfig {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 export interface Subject {
   id: string;
   name: string;
@@ -90,6 +97,10 @@ export interface FileFilter {
 export const IPC = {
   GET_CONFIG: 'config:get',
   SAVE_CONFIG: 'config:save',
+  LIST_CONFIGS: 'config:list',
+  SAVE_CONFIG_ITEM: 'config:saveItem',
+  DELETE_CONFIG_ITEM: 'config:deleteItem',
+  SET_ACTIVE_CONFIG: 'config:setActive',
   LIST_SUBJECTS: 'subject:list',
   CREATE_SUBJECT: 'subject:create',
   DELETE_SUBJECT: 'subject:delete',
@@ -107,4 +118,36 @@ export const IPC = {
   DELETE_QUIZ_SESSION: 'quiz:delete',
   PICK_FILES: 'sys:pickFiles',
   OPEN_EXTERNAL: 'sys:openExternal',
+  // LLM 调用（主进程转发，避免 CORS 并保护 API Key）
+  LLM_STREAM: 'llm:stream',
+  LLM_JSON: 'llm:json',
+  LLM_ABORT: 'llm:abort',
 } as const;
+
+// LLM 调用相关类型
+export interface LlmMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface LlmStreamOptions {
+  config: ApiConfig;
+  messages: LlmMessage[];
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface LlmTokenEvent {
+  requestId: string;
+  token: string;
+}
+
+export interface LlmDoneEvent {
+  requestId: string;
+  full: string;
+}
+
+export interface LlmErrorEvent {
+  requestId: string;
+  message: string;
+}

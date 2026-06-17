@@ -1,5 +1,6 @@
 // 基于 JSON 文件的数据存储（主进程）
 // 每个集合一个 JSON 文件，加载到内存，变更时落盘
+// 对话记录（chatSessions）存到独立的 chats/ 文件夹，每个对话一个文件
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +16,6 @@ import type {
 interface DBShape {
   subjects: Subject[];
   materials: Material[];
-  chatSessions: ChatSession[];
   reviewDocs: ReviewDoc[];
   quizSessions: QuizSession[];
 }
@@ -23,12 +23,12 @@ interface DBShape {
 const EMPTY_DB: DBShape = {
   subjects: [],
   materials: [],
-  chatSessions: [],
   reviewDocs: [],
   quizSessions: [],
 };
 
 let dbPath = '';
+let chatsDir = '';
 let data: DBShape = { ...EMPTY_DB };
 
 function getDataDir(): string {
@@ -39,12 +39,37 @@ function getDataDir(): string {
   return dir;
 }
 
+function getChatsDir(): string {
+  const dir = path.join(getDataDir(), 'chats');
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    console.error('创建 chats 目录失败（可能权限受限，将在保存时重试）:', err);
+  }
+  return dir;
+}
+
 export function initStore(): void {
-  dbPath = path.join(getDataDir(), 'db.json');
+  const dir = getDataDir();
+  dbPath = path.join(dir, 'db.json');
+  chatsDir = getChatsDir();
   try {
     if (fs.existsSync(dbPath)) {
       const raw = fs.readFileSync(dbPath, 'utf-8');
-      data = { ...EMPTY_DB, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      data = { ...EMPTY_DB, ...parsed };
+      // 迁移：如果旧 db.json 中有 chatSessions，迁移到独立文件
+      if (Array.isArray((parsed as Record<string, unknown>).chatSessions)) {
+        const oldSessions = (parsed as { chatSessions: ChatSession[] }).chatSessions;
+        for (const s of oldSessions) {
+          fs.writeFileSync(path.join(chatsDir, `${s.id}.json`), JSON.stringify(s, null, 2), 'utf-8');
+        }
+        // 从 db.json 中移除 chatSessions
+        delete (data as unknown as Record<string, unknown>).chatSessions;
+        persist();
+      }
     } else {
       data = { ...EMPTY_DB };
       persist();
@@ -86,9 +111,13 @@ export function createSubject(name: string, color: string): Subject {
 export function deleteSubject(id: string): void {
   data.subjects = data.subjects.filter((s) => s.id !== id);
   data.materials = data.materials.filter((m) => m.subject_id !== id);
-  data.chatSessions = data.chatSessions.filter((c) => c.subject_id !== id);
   data.reviewDocs = data.reviewDocs.filter((r) => r.subject_id !== id);
   data.quizSessions = data.quizSessions.filter((q) => q.subject_id !== id);
+  // 删除该科目下的所有对话文件
+  const sessions = listChatSessions(id);
+  for (const s of sessions) {
+    deleteChatSession(s.id);
+  }
   persist();
 }
 
@@ -121,30 +150,56 @@ export function deleteMaterial(id: string): void {
   persist();
 }
 
-// ---------- Chat Sessions ----------
+// ---------- Chat Sessions（独立文件存储） ----------
 export function listChatSessions(subjectId: string): ChatSession[] {
-  return data.chatSessions
-    .filter((c) => c.subject_id === subjectId)
-    .sort((a, b) => b.created_at - a.created_at);
+  try {
+    const files = fs.readdirSync(chatsDir).filter((f) => f.endsWith('.json'));
+    const sessions: ChatSession[] = [];
+    for (const f of files) {
+      try {
+        const raw = fs.readFileSync(path.join(chatsDir, f), 'utf-8');
+        const s = JSON.parse(raw) as ChatSession;
+        if (s.subject_id === subjectId) sessions.push(s);
+      } catch {
+        // 跳过损坏文件
+      }
+    }
+    return sessions.sort((a, b) => b.created_at - a.created_at);
+  } catch {
+    return [];
+  }
 }
 
 export function getChatSession(id: string): ChatSession | undefined {
-  return data.chatSessions.find((c) => c.id === id);
+  const filePath = path.join(chatsDir, `${id}.json`);
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(raw) as ChatSession;
+  } catch {
+    return undefined;
+  }
 }
 
 export function saveChatSession(session: ChatSession): void {
-  const idx = data.chatSessions.findIndex((c) => c.id === session.id);
-  if (idx >= 0) {
-    data.chatSessions[idx] = session;
-  } else {
-    data.chatSessions.push(session);
+  try {
+    // 确保目录存在（可能在 initStore 时创建失败，这里重试）
+    if (!fs.existsSync(chatsDir)) {
+      fs.mkdirSync(chatsDir, { recursive: true });
+    }
+    const filePath = path.join(chatsDir, `${session.id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(session, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('保存对话记录失败:', err);
   }
-  persist();
 }
 
 export function deleteChatSession(id: string): void {
-  data.chatSessions = data.chatSessions.filter((c) => c.id !== id);
-  persist();
+  const filePath = path.join(chatsDir, `${id}.json`);
+  try {
+    fs.unlinkSync(filePath);
+  } catch {
+    // 文件不存在则忽略
+  }
 }
 
 // ---------- Review Docs ----------

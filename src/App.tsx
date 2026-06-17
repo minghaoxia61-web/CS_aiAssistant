@@ -1,5 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
+import Dialog from "@/components/Dialog";
 import Setup from "@/pages/Setup";
 import Library from "@/pages/Library";
 import Chat from "@/pages/Chat";
@@ -9,6 +10,7 @@ import Quiz from "@/pages/Quiz";
 export default function App() {
   return (
     <Router>
+      <Dialog />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/chat" replace />} />

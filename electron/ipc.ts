@@ -3,10 +3,11 @@ import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { IPC, type ApiConfig, type Material, type FileFilter } from '../src/shared/types';
+import { IPC, type ApiConfig, type ApiConfigItem, type Material, type FileFilter, type LlmStreamOptions } from '../src/shared/types';
 import * as store from './store';
-import { getConfig, saveConfig } from './config';
+import { getConfig, saveConfig, listConfigs, saveConfigItem, deleteConfigItem, setActiveConfig, getActiveConfigId } from './config';
 import { parseFile, getFileType } from './parsers';
+import { streamChat, chatJSON } from './llm';
 
 const now = () => Date.now();
 
@@ -28,6 +29,19 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.SAVE_CONFIG, (_e, cfg: ApiConfig) => {
     saveConfig(cfg);
     return true;
+  });
+  // 多配置管理
+  ipcMain.handle(IPC.LIST_CONFIGS, () => listConfigs());
+  ipcMain.handle(IPC.SAVE_CONFIG_ITEM, (_e, item: Partial<ApiConfigItem> & { id?: string }) => {
+    return saveConfigItem(item);
+  });
+  ipcMain.handle(IPC.DELETE_CONFIG_ITEM, (_e, id: string) => {
+    deleteConfigItem(id);
+    return true;
+  });
+  ipcMain.handle(IPC.SET_ACTIVE_CONFIG, (_e, id: string) => {
+    setActiveConfig(id);
+    return getConfig();
   });
 
   // ---------- 科目 ----------
@@ -151,5 +165,56 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.OPEN_EXTERNAL, (_e, url: string) => {
     shell.openExternal(url);
     return true;
+  });
+
+  // ---------- LLM 调用（主进程转发） ----------
+  // 记录每个进行中的流式请求，便于中止
+  const activeStreams = new Map<string, { abort: () => void }>();
+
+  // 流式对话：返回 requestId，token 通过 llm:token / llm:done / llm:error 事件推送
+  ipcMain.handle(IPC.LLM_STREAM, (_e, opts: LlmStreamOptions) => {
+    const requestId = uuidv4();
+    const handle = streamChat(
+      { config: opts.config, messages: opts.messages, temperature: opts.temperature, maxTokens: opts.maxTokens, stream: true },
+      {
+        onToken: (token) => emit('llm:token', { requestId, token }),
+        onDone: (full) => {
+          activeStreams.delete(requestId);
+          emit('llm:done', { requestId, full });
+        },
+        onError: (message) => {
+          activeStreams.delete(requestId);
+          emit('llm:error', { requestId, message });
+        },
+      },
+    );
+    activeStreams.set(requestId, handle);
+    return requestId;
+  });
+
+  // 中止流式请求
+  ipcMain.handle(IPC.LLM_ABORT, (_e, reqId: string) => {
+    const handle = activeStreams.get(reqId);
+    if (handle) {
+      handle.abort();
+      activeStreams.delete(reqId);
+    }
+    return true;
+  });
+
+  // 非流式调用（用于出题/批改等结构化 JSON 输出）
+  ipcMain.handle(IPC.LLM_JSON, async (_e, opts: LlmStreamOptions) => {
+    try {
+      const content = await chatJSON({
+        config: opts.config,
+        messages: opts.messages,
+        temperature: opts.temperature,
+        maxTokens: opts.maxTokens,
+        stream: false,
+      });
+      return { ok: true, content };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
+    }
   });
 }

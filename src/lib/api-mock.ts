@@ -1,7 +1,7 @@
 // 浏览器预览环境下的 window.api mock（Electron 中 window.api 已存在，跳过）
 // 仅用于在普通浏览器中预览 UI，数据为空且不可持久化
 import type { ElectronAPI } from '@/global.d'
-import type { ApiConfig, Subject, Material, ChatSession, ReviewDoc, QuizSession } from '@/shared/types'
+import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDoc, QuizSession, LlmStreamOptions, LlmTokenEvent, LlmDoneEvent, LlmErrorEvent } from '@/shared/types'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://api.deepseek.com/v1',
@@ -51,6 +51,29 @@ export function installMockIfNeeded() {
       s.config = cfg
       saveState(s)
       return true
+    },
+    // 多配置 mock
+    async listConfigs() {
+      const s = loadState()
+      if (s.config.apiKey) {
+        return [{ ...s.config, id: 'mock-1', name: '预览配置', createdAt: Date.now() } as ApiConfigItem]
+      }
+      return []
+    },
+    async saveConfigItem(item) {
+      const s = loadState()
+      s.config = { ...DEFAULT_CONFIG, ...item }
+      saveState(s)
+      return { ...s.config, id: item.id || 'mock-1', name: item.name || '预览配置', createdAt: Date.now() } as ApiConfigItem
+    },
+    async deleteConfigItem() {
+      const s = loadState()
+      s.config = { ...DEFAULT_CONFIG }
+      saveState(s)
+      return true
+    },
+    async setActiveConfig(id) {
+      return loadState().config
     },
     async listSubjects() {
       return loadState().subjects
@@ -164,6 +187,44 @@ export function installMockIfNeeded() {
         }
         input.click()
       })
+    },
+    // LLM mock：浏览器预览中模拟流式回复
+    async llmStream(opts: LlmStreamOptions) {
+      const requestId = crypto.randomUUID()
+      const reply = `（浏览器预览模式：未连接真实 API。请在桌面应用中配置 API Key 后使用。\n\n收到 ${opts.messages.length} 条消息，模型：${opts.config.model}）`
+      // 逐字推送模拟流式效果
+      const chars = Array.from(reply)
+      let i = 0
+      const timer = setInterval(() => {
+        if (i >= chars.length) {
+          clearInterval(timer)
+          window.dispatchEvent(new CustomEvent('mock-llm-done', { detail: { requestId, full: reply } }))
+          return
+        }
+        const token = chars[i]
+        window.dispatchEvent(new CustomEvent('mock-llm-token', { detail: { requestId, token } }))
+        i++
+      }, 20)
+      return requestId
+    },
+    async llmAbort() {
+      return true
+    },
+    async llmJSON() {
+      return { ok: false, error: '浏览器预览模式不支持 LLM 调用，请在桌面应用中使用' }
+    },
+    onLlmToken(cb: (payload: LlmTokenEvent) => void) {
+      const handler = (e: Event) => cb((e as CustomEvent).detail)
+      window.addEventListener('mock-llm-token', handler)
+      return () => window.removeEventListener('mock-llm-token', handler)
+    },
+    onLlmDone(cb: (payload: LlmDoneEvent) => void) {
+      const handler = (e: Event) => cb((e as CustomEvent).detail)
+      window.addEventListener('mock-llm-done', handler)
+      return () => window.removeEventListener('mock-llm-done', handler)
+    },
+    onLlmError(_cb: (payload: LlmErrorEvent) => void) {
+      return () => {}
     },
     async openExternal(url) {
       window.open(url, '_blank')
