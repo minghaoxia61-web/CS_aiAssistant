@@ -1,6 +1,6 @@
 // 全局状态管理（Zustand）
 import { create } from 'zustand'
-import type { ApiConfig, ApiConfigItem, Subject } from '@/shared/types'
+import type { ApiConfig, ApiConfigItem, Subject, UserProfile } from '@/shared/types'
 
 interface AppState {
   // 配置
@@ -15,6 +15,11 @@ interface AppState {
   deleteConfigItem: (id: string) => Promise<void>
   switchConfig: (id: string) => Promise<void>
 
+  // 用户个人信息
+  profile: UserProfile
+  loadProfile: () => Promise<void>
+  saveProfile: (profile: UserProfile) => Promise<void>
+
   // 科目
   subjects: Subject[]
   currentSubjectId: string | null
@@ -22,6 +27,11 @@ interface AppState {
   createSubject: (name: string, color: string) => Promise<Subject>
   deleteSubject: (id: string) => Promise<void>
   selectSubject: (id: string | null) => void
+
+  // 主题
+  theme: 'light' | 'dark'
+  toggleTheme: () => void
+  initTheme: () => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -66,6 +76,19 @@ export const useStore = create<AppState>((set, get) => ({
     set({ config: cfg, activeConfigId: id })
   },
 
+  // 用户个人信息
+  profile: { nickname: '', grade: '', goal: '', weakAreas: '', preferredStyle: '' },
+
+  async loadProfile() {
+    const profile = await window.api.getProfile()
+    set({ profile })
+  },
+
+  async saveProfile(profile) {
+    await window.api.saveProfile(profile)
+    set({ profile })
+  },
+
   subjects: [],
   currentSubjectId: null,
 
@@ -96,6 +119,27 @@ export const useStore = create<AppState>((set, get) => ({
   selectSubject(id) {
     set({ currentSubjectId: id })
   },
+
+  // 主题
+  theme: 'light',
+
+  initTheme() {
+    const saved = localStorage.getItem('theme') as 'light' | 'dark' | null
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    const theme = saved || (prefersDark ? 'dark' : 'light')
+    set({ theme })
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  },
+
+  toggleTheme() {
+    const next = get().theme === 'light' ? 'dark' : 'light'
+    localStorage.setItem('theme', next)
+    document.documentElement.classList.add('theme-transition')
+    document.documentElement.classList.toggle('dark', next === 'dark')
+    set({ theme: next })
+    setTimeout(() => document.documentElement.classList.remove('theme-transition'), 400)
+  },
 }))
 
-export const hasConfig = (s: AppState) => !!s.config?.apiKey
+// 默认配置始终可用（Pollinations 免费模型），故只要有 config 即视为就绪
+export const hasConfig = (s: AppState) => !!s.config

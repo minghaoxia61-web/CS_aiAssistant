@@ -3,11 +3,12 @@ import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { IPC, type ApiConfig, type ApiConfigItem, type Material, type FileFilter, type LlmStreamOptions } from '../src/shared/types';
+import { IPC, type ApiConfig, type ApiConfigItem, type Material, type FileFilter, type LlmStreamOptions, type UserProfile, type TaskProgress, type WrongQuestion } from '../src/shared/types';
 import * as store from './store';
 import { getConfig, saveConfig, listConfigs, saveConfigItem, deleteConfigItem, setActiveConfig, getActiveConfigId } from './config';
 import { parseFile, getFileType } from './parsers';
 import { streamChat, chatJSON } from './llm';
+import * as taskQueue from './task-queue';
 
 const now = () => Date.now();
 
@@ -44,6 +45,13 @@ export function registerIpc(): void {
     return getConfig();
   });
 
+  // ---------- 用户个人信息 ----------
+  ipcMain.handle(IPC.GET_PROFILE, () => store.getProfile());
+  ipcMain.handle(IPC.SAVE_PROFILE, (_e, profile: UserProfile) => {
+    store.saveProfile(profile);
+    return true;
+  });
+
   // ---------- 科目 ----------
   ipcMain.handle(IPC.LIST_SUBJECTS, () => store.listSubjects());
   ipcMain.handle(IPC.CREATE_SUBJECT, (_e, name: string, color: string) =>
@@ -76,10 +84,12 @@ export function registerIpc(): void {
       });
 
       // 异步解析，逐个更新并通过事件通知渲染进程
+      // 图片 OCR 需要传入当前 API 配置以调用视觉模型
+      const apiConfig = getConfig();
       created.forEach(async (m) => {
         try {
           const filePath = filePaths.find((p) => path.basename(p) === m.filename)!;
-          const result = await parseFile(filePath);
+          const result = await parseFile(filePath, apiConfig);
           store.updateMaterial(m.id, {
             status: 'ready',
             text_content: result.text,
@@ -103,6 +113,12 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.GET_MATERIALS, (_e, subjectId: string) =>
     store.getMaterials(subjectId)
   );
+
+  // 更新资料元数据（标签、所属科目等）
+  ipcMain.handle(IPC.UPDATE_MATERIAL, (_e, id: string, patch: Partial<Material>) => {
+    store.updateMaterial(id, patch);
+    return true;
+  });
 
   ipcMain.handle(IPC.DELETE_MATERIAL, (_e, id: string) => {
     store.deleteMaterial(id);
@@ -150,12 +166,32 @@ export function registerIpc(): void {
     return true;
   });
 
+  // ---------- 错题本 ----------
+  ipcMain.handle(IPC.LIST_WRONG_QUESTIONS, (_e, subjectId?: string) =>
+    store.listWrongQuestions(subjectId)
+  );
+  ipcMain.handle(IPC.ADD_WRONG_QUESTION, (_e, wq: WrongQuestion) => {
+    store.addWrongQuestion(wq);
+    return true;
+  });
+  ipcMain.handle(IPC.DELETE_WRONG_QUESTION, (_e, id: string) => {
+    store.deleteWrongQuestion(id);
+    return true;
+  });
+  ipcMain.handle(IPC.MARK_WRONG_REVIEWED, (_e, id: string, reviewed: boolean) => {
+    store.markWrongReviewed(id, reviewed);
+    return true;
+  });
+  ipcMain.handle(IPC.GENERATE_WRONG_QUIZ, (_e, subjectId: string, count: number) =>
+    store.getWrongQuestionsForQuiz(subjectId, count)
+  );
+
   // ---------- 系统 ----------
   ipcMain.handle(IPC.PICK_FILES, async (_e, filters?: FileFilter[]) => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: filters || [
-        { name: '文档', extensions: ['pdf', 'docx', 'pptx', 'txt', 'md', 'doc'] },
+        { name: '文档与图片', extensions: ['pdf', 'docx', 'pptx', 'txt', 'md', 'doc', 'jpg', 'jpeg', 'png'] },
         { name: '所有文件', extensions: ['*'] },
       ],
     });
@@ -216,5 +252,47 @@ export function registerIpc(): void {
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }
+  });
+
+  // ---------- 异步后台任务队列 ----------
+  // 订阅任务队列进度，转发到渲染进程
+  taskQueue.onProgress((progress: TaskProgress) => {
+    emit(IPC.TASK_PROGRESS, progress);
+  });
+
+  // 批量解析文件：返回任务 ID，进度通过 task:progress 事件推送
+  ipcMain.handle(
+    IPC.PARSE_BATCH,
+    (_e, files: { path: string; type: string }[]) => {
+      const taskId = taskQueue.enqueue({ type: 'parse', files });
+      return taskId;
+    },
+  );
+
+  // 取消任务
+  ipcMain.handle(IPC.CANCEL_TASK, (_e, taskId: string) => {
+    taskQueue.cancel(taskId);
+    return true;
+  });
+
+  // 清理解析缓存
+  ipcMain.handle(IPC.CLEAR_PARSE_CACHE, () => {
+    taskQueue.clearParseCache();
+    return true;
+  });
+
+  // ---------- 科目检索索引持久化缓存 ----------
+  ipcMain.handle(IPC.SAVE_SUBJECT_INDEX, (_e, subjectId: string, indexData: unknown) => {
+    store.saveSubjectIndex(subjectId, indexData as Parameters<typeof store.saveSubjectIndex>[1]);
+    return true;
+  });
+  ipcMain.handle(IPC.LOAD_SUBJECT_INDEX, (_e, subjectId: string) =>
+    store.loadSubjectIndex(subjectId)
+  );
+
+  // ---------- 缓存清理（chunks/index/chats） ----------
+  ipcMain.handle(IPC.CLEAR_CACHE, (_e, types: string[]) => {
+    store.clearCache(types);
+    return true;
   });
 }

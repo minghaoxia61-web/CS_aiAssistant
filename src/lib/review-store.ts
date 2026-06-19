@@ -1,7 +1,7 @@
 // 复习中心全局状态：生成状态提升到 store 层，切换页面不打断生成
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import { streamChat, chatJSON, buildContext, SYSTEM_PROMPTS, extractJSON } from '@/lib/llm'
+import { streamChat, chatJSON, buildContextSmart, SYSTEM_PROMPTS, extractJSON } from '@/lib/llm'
 import { formatTime } from '@/lib/utils'
 import type { ApiConfig, Material, ReviewDoc, ReviewDocType } from '@/shared/types'
 
@@ -35,7 +35,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   activeSubjectId: null,
 
   generate: async (type, ctxMaterials, config, subjectId) => {
-    if (!config?.apiKey || ctxMaterials.length === 0) return
+    if (!config || ctxMaterials.length === 0) return
 
     // 中止之前的生成
     if (abortController) abortController.abort()
@@ -51,7 +51,18 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     })
 
     abortController = new AbortController()
-    const context = buildContext(ctxMaterials)
+    // 智能构建上下文：资料少直接拼接，资料多先逐份压缩（Map-Reduce）
+    const context = await buildContextSmart(
+      ctxMaterials,
+      config,
+      abortController.signal,
+      (msg) => {
+        // 显示压缩进度
+        if (get().activeSubjectId === subjectId) {
+          set({ streamText: msg })
+        }
+      },
+    )
     const userContent = `以下是课程资料，请基于这些内容生成${type === 'summary' ? '章节总结' : type === 'outline' ? '复习大纲' : '速记卡片'}：\n${context}`
 
     try {

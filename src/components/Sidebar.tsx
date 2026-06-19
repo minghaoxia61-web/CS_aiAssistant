@@ -1,6 +1,6 @@
 // 侧边导航栏
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Settings, Library, MessagesSquare, BookOpen, ListChecks, GraduationCap } from 'lucide-react'
+import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
@@ -10,11 +10,13 @@ const NAV = [
   { to: '/library', label: '资料库', icon: Library },
   { to: '/review', label: '复习中心', icon: BookOpen },
   { to: '/quiz', label: '自我测验', icon: ListChecks },
+  { to: '/wrong-book', label: '错题本', icon: BookX },
+  { to: '/analytics', label: '学情分析', icon: BarChart3 },
 ]
 
 export default function Sidebar() {
   const navigate = useNavigate()
-  const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject } = useStore()
+  const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject, theme, toggleTheme } = useStore()
 
   return (
     <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-850/50 backdrop-blur-xl">
@@ -106,7 +108,22 @@ export default function Sidebar() {
       </div>
 
       {/* 底部设置 */}
-      <div className="px-3 py-3 border-t border-amber/8">
+      <div className="px-3 py-3 border-t border-amber/8 space-y-1">
+        <button
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          onClick={toggleTheme}
+          title={theme === 'light' ? '切换到护眼暗色' : '切换到浅色'}
+        >
+          {theme === 'light' ? <Moon className="w-[18px] h-[18px]" strokeWidth={1.8} /> : <Sun className="w-[18px] h-[18px]" strokeWidth={1.8} />}
+          <span className="font-medium">{theme === 'light' ? '护眼暗色' : '浅色模式'}</span>
+        </button>
+        <button
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          onClick={() => navigate('/profile')}
+        >
+          <User className="w-[18px] h-[18px]" strokeWidth={1.8} />
+          <span className="font-medium">个人信息</span>
+        </button>
         <button
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
           onClick={() => navigate('/setup')}

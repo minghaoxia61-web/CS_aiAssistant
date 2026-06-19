@@ -1,7 +1,7 @@
 // 浏览器预览环境下的 window.api mock（Electron 中 window.api 已存在，跳过）
 // 仅用于在普通浏览器中预览 UI，数据为空且不可持久化
 import type { ElectronAPI } from '@/global.d'
-import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDoc, QuizSession, LlmStreamOptions, LlmTokenEvent, LlmDoneEvent, LlmErrorEvent } from '@/shared/types'
+import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDoc, QuizSession, LlmStreamOptions, LlmTokenEvent, LlmDoneEvent, LlmErrorEvent, UserProfile, TaskProgress } from '@/shared/types'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://api.deepseek.com/v1',
@@ -21,6 +21,7 @@ function loadState(): {
   reviews: ReviewDoc[]
   quizzes: QuizSession[]
   config: ApiConfig
+  profile?: UserProfile
 } {
   try {
     const raw = localStorage.getItem(LS_KEY)
@@ -114,6 +115,15 @@ export function installMockIfNeeded() {
     async getMaterials(subjectId) {
       return loadState().materials.filter((m) => m.subject_id === subjectId)
     },
+    async updateMaterial(id, patch) {
+      const s = loadState()
+      const idx = s.materials.findIndex((m) => m.id === id)
+      if (idx >= 0) {
+        s.materials[idx] = { ...s.materials[idx], ...patch }
+        saveState(s)
+      }
+      return true
+    },
     async deleteMaterial(id) {
       const s = loadState()
       s.materials = s.materials.filter((m) => m.id !== id)
@@ -174,6 +184,16 @@ export function installMockIfNeeded() {
       saveState(s)
       return true
     },
+    async getProfile() {
+      const s = loadState()
+      return s.profile || { nickname: '', grade: '', goal: '', weakAreas: '', preferredStyle: '' }
+    },
+    async saveProfile(profile) {
+      const s = loadState()
+      s.profile = profile
+      saveState(s)
+      return true
+    },
     async pickFiles() {
       // 浏览器中用 input 选择文件
       return new Promise<string[]>((resolve) => {
@@ -225,6 +245,47 @@ export function installMockIfNeeded() {
     },
     onLlmError(_cb: (payload: LlmErrorEvent) => void) {
       return () => {}
+    },
+    // 错题本 mock（浏览器预览模式不可用）
+    async listWrongQuestions() {
+      return []
+    },
+    async addWrongQuestion() {
+      return true
+    },
+    async deleteWrongQuestion() {
+      return true
+    },
+    async markWrongReviewed() {
+      return true
+    },
+    async generateWrongQuiz() {
+      return []
+    },
+    // 异步后台任务队列 mock（浏览器预览模式不可用）
+    async parseBatch() {
+      return 'mock-task-id'
+    },
+    onTaskProgress(_cb: (progress: TaskProgress) => void) {
+      void _cb
+      return () => {}
+    },
+    async cancelTask() {
+      return
+    },
+    async clearParseCache() {
+      return
+    },
+    // 科目检索索引持久化缓存 mock（浏览器预览模式不可用）
+    async saveSubjectIndex() {
+      return true
+    },
+    async loadSubjectIndex() {
+      return undefined
+    },
+    // 缓存清理 mock
+    async clearCache() {
+      return true
     },
     async openExternal(url) {
       window.open(url, '_blank')

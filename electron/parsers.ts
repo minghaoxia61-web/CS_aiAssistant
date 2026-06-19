@@ -1,6 +1,8 @@
-// 文件解析服务（主进程）：提取 PDF/DOCX/PPTX/TXT/MD 纯文本
+// 文件解析服务（主进程）：提取 PDF/DOCX/PPTX/TXT/MD/图片 纯文本
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ApiConfig } from '../src/shared/types';
+import { visionJSON } from './llm';
 
 // 使用 require 加载纯 CJS 库，避免 ESM 互操作问题
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -20,7 +22,7 @@ export function getFileType(filename: string): string {
   return ext || 'unknown';
 }
 
-export async function parseFile(filePath: string): Promise<ParseResult> {
+export async function parseFile(filePath: string, config?: ApiConfig): Promise<ParseResult> {
   const filename = path.basename(filePath);
   const filetype = getFileType(filename);
 
@@ -35,6 +37,10 @@ export async function parseFile(filePath: string): Promise<ParseResult> {
     case 'md':
     case 'markdown':
       return { text: await parseText(filePath), filetype };
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+      return { text: await parseImage(filePath, config), filetype };
     case 'doc':
       // 旧版 .doc 二进制格式暂不支持精确解析，提示用户转 docx
       return {
@@ -75,11 +81,14 @@ async function parsePptx(filePath: string): Promise<string> {
     });
 
   const texts: string[] = [];
-  for (const slideFile of slideFiles) {
+  for (let i = 0; i < slideFiles.length; i++) {
+    const slideFile = slideFiles[i];
+    const pageNum = i + 1;
     const xml = await zip.files[slideFile].async('string');
     const slideTexts = extractTextFromSlideXml(xml);
     if (slideTexts.length) {
-      texts.push(slideTexts.join('\n'));
+      // 每页标注页码，便于分块后 AI 引用来源页码
+      texts.push(`[Page ${pageNum}]\n${slideTexts.join('\n')}`);
     }
   }
   return texts.join('\n\n---\n\n').trim();
@@ -108,4 +117,50 @@ function decodeXmlEntities(s: string): string {
 
 async function parseText(filePath: string): Promise<string> {
   return fs.readFileSync(filePath, 'utf-8').trim();
+}
+
+/**
+ * 图片 OCR：将图片转为 base64，通过视觉大模型识别提取文字。
+ * 不引入外部 OCR 库，复用已配置的 LLM API。
+ * 智谱（bigmodel.cn）默认配置自动切换到免费视觉模型 glm-4v-flash。
+ */
+async function parseImage(filePath: string, config?: ApiConfig): Promise<string> {
+  if (!config || !config.apiKey) {
+    return '[图片 OCR 需要配置 API，请在设置页配置 LLM API 后重新上传该图片]';
+  }
+  const buffer = fs.readFileSync(filePath);
+  const ext = path.extname(filePath).toLowerCase().replace('.', '');
+  const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const base64 = buffer.toString('base64');
+  const dataUrl = `data:${mime};base64,${base64}`;
+
+  // 智谱 GLM-4-Flash 为纯文本模型，需切换到视觉模型 glm-4v-flash（免费额度）
+  const isZhipu = config.baseUrl.includes('bigmodel.cn');
+  const visionConfig: ApiConfig = {
+    ...config,
+    model: isZhipu ? 'glm-4v-flash' : config.model,
+  };
+
+  try {
+    const text = await visionJSON({
+      config: visionConfig,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: '请识别并提取这张图片中的所有文字内容，保持原始结构、排版与层级。只输出识别到的文字，不要添加任何解释或前后缀说明。如果图片中没有文字（如纯图表/示意图），请简要描述图片所表达的内容。',
+            },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      maxTokens: 2000,
+    });
+    return (text || '').trim() || '[图片未识别到文字内容]';
+  } catch (e) {
+    return `[图片 OCR 失败：${(e as Error).message}]`;
+  }
 }

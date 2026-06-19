@@ -9,40 +9,40 @@ export default {
     },
     extend: {
       colors: {
-        // 温暖浅色背景
+        // 背景层 — 使用 CSS 变量支持双主题
         ink: {
-          950: "#f5f4f0",
-          900: "#ffffff",
-          850: "#efede8",
-          800: "#e6e3dc",
-          750: "#dad6cc",
-          700: "#ccc8bc",
-          600: "#b5b0a2",
-          500: "#9a948a",
+          950: "var(--bg-base)",
+          900: "var(--bg-surface)",
+          850: "var(--bg-elevated)",
+          800: "var(--bg-hover)",
+          750: "var(--bg-active)",
+          700: "var(--bg-active)",
+          600: "var(--text-faint)",
+          500: "var(--text-muted)",
         },
-        // 琥珀金主色（浅色背景下加深以保证对比度）
+        // 琥珀金主色
         amber: {
-          DEFAULT: "#b8860b",
-          soft: "#c8964a",
-          dim: "#8a6508",
-          glow: "#d4a017",
+          DEFAULT: "var(--amber)",
+          soft: "var(--amber-soft)",
+          dim: "var(--amber-dim)",
+          glow: "var(--amber-glow)",
         },
         // 鼠尾草绿辅色
         sage: {
-          DEFAULT: "#5a8a56",
-          dim: "#4a7a46",
-          glow: "#6a9a66",
+          DEFAULT: "var(--sage)",
+          dim: "var(--sage-dim)",
+          glow: "var(--sage-glow)",
         },
-        // 文本（深色）
+        // 文本
         bone: {
-          DEFAULT: "#2d2a24",
-          dim: "#5c574f",
-          muted: "#6b665e",
-          faint: "#8a857c",
+          DEFAULT: "var(--text-primary)",
+          dim: "var(--text-secondary)",
+          muted: "var(--text-muted)",
+          faint: "var(--text-faint)",
         },
         // 状态
-        rust: "#b8553a",
-        moss: "#5a8a56",
+        rust: "var(--rust)",
+        moss: "var(--moss)",
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],
@@ -56,9 +56,9 @@ export default {
       },
       backgroundImage: {
         'grid-faint':
-          'linear-gradient(rgba(184,134,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(184,134,11,0.03) 1px, transparent 1px)',
+          'linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px)',
         'radial-glow':
-          'radial-gradient(ellipse at top, rgba(184,134,11,0.06), transparent 60%)',
+          'radial-gradient(ellipse at top, var(--glow-color), transparent 60%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',

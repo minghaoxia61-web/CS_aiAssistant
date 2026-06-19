@@ -1,6 +1,6 @@
 // Preload 脚本：通过 contextBridge 暴露安全 IPC API
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, type FileFilter, type LlmStreamOptions, type LlmTokenEvent, type LlmDoneEvent, type LlmErrorEvent, type ApiConfigItem, type ApiConfig } from '../src/shared/types';
+import { IPC, type FileFilter, type LlmStreamOptions, type LlmTokenEvent, type LlmDoneEvent, type LlmErrorEvent, type ApiConfigItem, type ApiConfig, type UserProfile, type WrongQuestion, type TaskProgress, type Material } from '../src/shared/types';
 
 const api = {
   // 配置
@@ -12,6 +12,10 @@ const api = {
   deleteConfigItem: (id: string) => ipcRenderer.invoke(IPC.DELETE_CONFIG_ITEM, id),
   setActiveConfig: (id: string) => ipcRenderer.invoke(IPC.SET_ACTIVE_CONFIG, id) as Promise<ApiConfig>,
 
+  // 用户个人信息
+  getProfile: () => ipcRenderer.invoke(IPC.GET_PROFILE) as Promise<UserProfile>,
+  saveProfile: (profile: UserProfile) => ipcRenderer.invoke(IPC.SAVE_PROFILE, profile),
+
   // 科目
   listSubjects: () => ipcRenderer.invoke(IPC.LIST_SUBJECTS),
   createSubject: (name: string, color: string) =>
@@ -22,6 +26,8 @@ const api = {
   uploadMaterials: (subjectId: string, filePaths: string[]) =>
     ipcRenderer.invoke(IPC.UPLOAD_MATERIALS, subjectId, filePaths),
   getMaterials: (subjectId: string) => ipcRenderer.invoke(IPC.GET_MATERIALS, subjectId),
+  updateMaterial: (id: string, patch: Partial<Material>) =>
+    ipcRenderer.invoke(IPC.UPDATE_MATERIAL, id, patch),
   deleteMaterial: (id: string) => ipcRenderer.invoke(IPC.DELETE_MATERIAL, id),
   onMaterialUpdated: (cb: (payload: { id: string; status: string; filetype?: string }) => void) => {
     const handler = (_e: unknown, payload: { id: string; status: string; filetype?: string }) => cb(payload);
@@ -44,6 +50,16 @@ const api = {
   listQuizSessions: (subjectId: string) => ipcRenderer.invoke(IPC.LIST_QUIZ_SESSIONS, subjectId),
   deleteQuizSession: (id: string) => ipcRenderer.invoke(IPC.DELETE_QUIZ_SESSION, id),
 
+  // 错题本
+  listWrongQuestions: (subjectId?: string) =>
+    ipcRenderer.invoke(IPC.LIST_WRONG_QUESTIONS, subjectId) as Promise<WrongQuestion[]>,
+  addWrongQuestion: (wq: WrongQuestion) => ipcRenderer.invoke(IPC.ADD_WRONG_QUESTION, wq),
+  deleteWrongQuestion: (id: string) => ipcRenderer.invoke(IPC.DELETE_WRONG_QUESTION, id),
+  markWrongReviewed: (id: string, reviewed: boolean) =>
+    ipcRenderer.invoke(IPC.MARK_WRONG_REVIEWED, id, reviewed),
+  generateWrongQuiz: (subjectId: string, count: number) =>
+    ipcRenderer.invoke(IPC.GENERATE_WRONG_QUIZ, subjectId, count) as Promise<WrongQuestion[]>,
+
   // LLM 调用（主进程转发）
   llmStream: (opts: LlmStreamOptions) => ipcRenderer.invoke(IPC.LLM_STREAM, opts),
   llmAbort: (requestId: string) => ipcRenderer.invoke(IPC.LLM_ABORT, requestId),
@@ -64,6 +80,29 @@ const api = {
     ipcRenderer.on('llm:error', handler);
     return () => ipcRenderer.removeListener('llm:error', handler);
   },
+
+  // 异步后台任务队列
+  parseBatch: (files: { path: string; type: string }[]) =>
+    ipcRenderer.invoke(IPC.PARSE_BATCH, files) as Promise<string>,
+  onTaskProgress: (cb: (progress: TaskProgress) => void) => {
+    const handler = (_e: unknown, payload: TaskProgress) => cb(payload);
+    ipcRenderer.on(IPC.TASK_PROGRESS, handler);
+    return () => ipcRenderer.removeListener(IPC.TASK_PROGRESS, handler);
+  },
+  cancelTask: (taskId: string) =>
+    ipcRenderer.invoke(IPC.CANCEL_TASK, taskId) as Promise<void>,
+  clearParseCache: () =>
+    ipcRenderer.invoke(IPC.CLEAR_PARSE_CACHE) as Promise<void>,
+
+  // 科目检索索引持久化缓存
+  saveSubjectIndex: (subjectId: string, indexData: unknown) =>
+    ipcRenderer.invoke(IPC.SAVE_SUBJECT_INDEX, subjectId, indexData) as Promise<boolean>,
+  loadSubjectIndex: (subjectId: string) =>
+    ipcRenderer.invoke(IPC.LOAD_SUBJECT_INDEX, subjectId) as Promise<unknown | undefined>,
+
+  // 缓存清理（chunks/index/chats）
+  clearCache: (types: string[]) =>
+    ipcRenderer.invoke(IPC.CLEAR_CACHE, types) as Promise<boolean>,
 
   // 系统
   pickFiles: (filters?: FileFilter[]) => ipcRenderer.invoke(IPC.PICK_FILES, filters),

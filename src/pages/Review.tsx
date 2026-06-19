@@ -1,10 +1,11 @@
 // 复习中心页：生成总结 / 大纲 / 速记卡
 // 生成状态提升到全局 store，切换页面不打断生成
 import { useEffect, useState, useCallback } from 'react'
-import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Download, RefreshCw } from 'lucide-react'
+import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Download, RefreshCw, Network } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
+import MindMap from '@/components/MindMap'
 import { useStore } from '@/lib/store'
 import { useReviewStore } from '@/lib/review-store'
 import { confirmDialog } from '@/lib/dialog'
@@ -28,6 +29,7 @@ export default function Review() {
   const [docs, setDocs] = useState<ReviewDoc[]>([])
   const [selectedMatIds, setSelectedMatIds] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
+  const [viewMode, setViewMode] = useState<'markdown' | 'mindmap'>('markdown')
 
   const subject = subjects.find((s) => s.id === currentSubjectId)
 
@@ -43,8 +45,8 @@ export default function Review() {
 
   useEffect(() => {
     refresh()
-    resetView()
-  }, [refresh, resetView])
+    // 不再调用 resetView()：切换页面回来后应保留之前的生成状态
+  }, [refresh])
 
   const readyMaterials = materials.filter((m) => m.status === 'ready')
 
@@ -63,7 +65,7 @@ export default function Review() {
   }
 
   const handleGenerate = (type: ReviewDocType) => {
-    if (!config?.apiKey || !currentSubjectId) return
+    if (!config || !currentSubjectId) return
     const ctxMaterials = readyMaterials.filter((m) => selectedMatIds.has(m.id))
     if (ctxMaterials.length === 0) {
       useReviewStore.setState({ error: '请至少选择一份资料' })
@@ -201,20 +203,45 @@ export default function Review() {
           )}
 
           {streamText && (
-            <div className="panel p-6 animate-fade-in">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-xl text-bone">
-                  {currentDoc?.title || '生成中...'}
-                </h3>
-                {currentDoc && (
-                  <button className="btn-ghost !px-2 !py-1 text-xs" onClick={copyContent}>
-                    {copied ? <Check className="w-3.5 h-3.5 text-sage-glow" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? '已复制' : '复制'}
+            <>
+              {/* 视图切换（仅大纲类型） */}
+              {currentDoc?.type === 'outline' && !generating && (
+                <div className="flex items-center gap-2 mb-4">
+                  <button
+                    className={cn('chip', viewMode === 'markdown' ? 'border-amber/50 bg-amber/12 text-amber' : 'text-bone-muted hover:text-amber')}
+                    onClick={() => setViewMode('markdown')}
+                  >
+                    <FileText className="w-3.5 h-3.5" /> 大纲视图
                   </button>
-                )}
-              </div>
-              <Markdown content={streamText} className={generating ? 'stream-cursor' : ''} />
-            </div>
+                  <button
+                    className={cn('chip', viewMode === 'mindmap' ? 'border-amber/50 bg-amber/12 text-amber' : 'text-bone-muted hover:text-amber')}
+                    onClick={() => setViewMode('mindmap')}
+                  >
+                    <Network className="w-3.5 h-3.5" /> 思维导图
+                  </button>
+                </div>
+              )}
+
+              {/* 内容区 */}
+              {viewMode === 'mindmap' && currentDoc?.type === 'outline' && !generating ? (
+                <MindMap content={streamText} title={currentDoc.title} />
+              ) : (
+                <div className="panel p-6 animate-fade-in">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display text-xl text-bone">
+                      {currentDoc?.title || '生成中...'}
+                    </h3>
+                    {currentDoc && (
+                      <button className="btn-ghost !px-2 !py-1 text-xs" onClick={copyContent}>
+                        {copied ? <Check className="w-3.5 h-3.5 text-sage-glow" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copied ? '已复制' : '复制'}
+                      </button>
+                    )}
+                  </div>
+                  <Markdown content={streamText} className={generating ? 'stream-cursor' : ''} streaming={generating} />
+                </div>
+              )}
+            </>
           )}
 
           {flashcards.length > 0 && (
