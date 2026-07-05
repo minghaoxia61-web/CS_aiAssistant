@@ -2,6 +2,7 @@
 // 仅用于在普通浏览器中预览 UI，数据为空且不可持久化
 import type { ElectronAPI } from '@/global.d'
 import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDoc, QuizSession, LlmStreamOptions, LlmTokenEvent, LlmDoneEvent, LlmErrorEvent, UserProfile, TaskProgress } from '@/shared/types'
+import { createHttpApi } from './api-http'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://api.deepseek.com/v1',
@@ -42,6 +43,12 @@ function saveState(s: ReturnType<typeof loadState>) {
 
 export function installMockIfNeeded() {
   if (typeof window !== 'undefined' && (window as { api?: ElectronAPI }).api) return
+
+  // Web 部署模式：安装 HTTP 适配器（连接真实后端）
+  if (import.meta.env.VITE_WEB_MODE === 'true') {
+    ;(window as { api?: ElectronAPI }).api = createHttpApi()
+    return
+  }
 
   const mock: ElectronAPI = {
     async getConfig() {

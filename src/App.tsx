@@ -9,6 +9,7 @@ import Quiz from "@/pages/Quiz";
 import WrongBook from "@/pages/WrongBook";
 import Analytics from "@/pages/Analytics";
 import Profile from "@/pages/Profile";
+import Knowledge from "@/pages/Knowledge";
 
 export default function App() {
   return (
@@ -16,7 +17,8 @@ export default function App() {
       <Dialog />
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/chat" replace />} />
+          <Route path="/" element={<Navigate to="/knowledge" replace />} />
+          <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/library" element={<Library />} />
           <Route path="/chat" element={<Chat />} />

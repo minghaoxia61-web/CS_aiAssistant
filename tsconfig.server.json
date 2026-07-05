@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2020"],
+    "outDir": "dist-server",
+    "rootDir": ".",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "sourceMap": false,
+    "declaration": false
+  },
+  "include": [
+    "server/**/*.ts",
+    "electron/parsers.ts",
+    "electron/llm.ts",
+    "src/shared/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "dist-electron"]
+}

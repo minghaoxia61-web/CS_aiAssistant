@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 dist-electron
+dist-server
+data-dev
+data
 *.local
 
 # Electron 打包产物与缓存

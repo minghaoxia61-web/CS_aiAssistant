@@ -3,14 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ApiConfig } from '../src/shared/types';
 import { visionJSON } from './llm';
-
-// 使用 require 加载纯 CJS 库，避免 ESM 互操作问题
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfParse = require('pdf-parse');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const mammoth = require('mammoth');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const JSZip = require('jszip');
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import JSZip from 'jszip';
 
 export interface ParseResult {
   text: string;

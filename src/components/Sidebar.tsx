@@ -1,11 +1,12 @@
 // 侧边导航栏
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon } from 'lucide-react'
+import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon, BookMarked } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
 
 const NAV = [
+  { to: '/knowledge', label: '知识板块', icon: BookMarked },
   { to: '/chat', label: '智能对话', icon: MessagesSquare },
   { to: '/library', label: '资料库', icon: Library },
   { to: '/review', label: '复习中心', icon: BookOpen },
