@@ -313,6 +313,20 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     const opts = req.body as LlmStreamOptions & { requestId?: string };
     const requestId = opts.requestId || uuidv4();
 
+    // 使用服务端配置作为后备（防止前端传来的 config 缺少 apiKey）
+    const serverConfig = getConfig();
+    const clientConfig = opts.config || serverConfig;
+    const config = {
+      ...serverConfig,
+      ...clientConfig,
+      // 如果前端没传 apiKey，用服务端的
+      apiKey: clientConfig.apiKey || serverConfig.apiKey,
+      baseUrl: clientConfig.baseUrl || serverConfig.baseUrl,
+      model: clientConfig.model || serverConfig.model,
+    };
+
+    console.log(`[LLM] 流式请求 ${requestId.slice(0, 8)}, model=${config.model}, baseUrl=${config.baseUrl}, hasKey=${!!config.apiKey}`);
+
     // 禁用请求超时，SSE 需要长连接
     req.setTimeout(0);
     res.writeHead(200, {
@@ -335,9 +349,11 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
       }
     }, 15000);
 
+    let streamFailed = false;
+
     const handle = streamChat(
       {
-        config: opts.config,
+        config,
         messages: opts.messages,
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
@@ -362,6 +378,42 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
           }
         },
         onError: (message) => {
+          console.error(`[LLM] 流式请求失败 ${requestId.slice(0, 8)}: ${message}`);
+          // 如果流式失败，尝试非流式作为后备
+          if (!streamFailed && message.includes('socket hang up')) {
+            streamFailed = true;
+            console.log(`[LLM] 流式失败，尝试非流式后备...`);
+            chatJSON({
+              config,
+              messages: opts.messages,
+              temperature: opts.temperature,
+              maxTokens: opts.maxTokens,
+              stream: false,
+            })
+              .then((content) => {
+                clearInterval(heartbeat);
+                activeStreams.delete(requestId);
+                try {
+                  // 发送完整内容作为一个 token
+                  res.write(`data: ${JSON.stringify({ type: 'token', requestId, token: content })}\n\n`);
+                  res.write(`data: ${JSON.stringify({ type: 'done', requestId, full: content })}\n\n`);
+                  res.end();
+                } catch {
+                  // 忽略
+                }
+              })
+              .catch((e) => {
+                clearInterval(heartbeat);
+                activeStreams.delete(requestId);
+                try {
+                  res.write(`data: ${JSON.stringify({ type: 'error', requestId, message: e.message })}\n\n`);
+                  res.end();
+                } catch {
+                  // 忽略
+                }
+              });
+            return;
+          }
           clearInterval(heartbeat);
           activeStreams.delete(requestId);
           try {
@@ -395,9 +447,17 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
   app.post('/api/llm/json', async (req: Request, res: Response) => {
     const opts = req.body as LlmStreamOptions;
+    const serverConfig = getConfig();
+    const config = {
+      ...serverConfig,
+      ...(opts.config || {}),
+      apiKey: opts.config?.apiKey || serverConfig.apiKey,
+      baseUrl: opts.config?.baseUrl || serverConfig.baseUrl,
+      model: opts.config?.model || serverConfig.model,
+    };
     try {
       const content = await chatJSON({
-        config: opts.config,
+        config,
         messages: opts.messages,
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
@@ -406,6 +466,21 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
       res.json({ ok: true, content });
     } catch (e) {
       res.json({ ok: false, error: (e as Error).message });
+    }
+  });
+
+  // ---------- 诊断端点：测试 GLM API 连接 ----------
+  app.get('/api/test-llm', async (_req: Request, res: Response) => {
+    try {
+      const config = getConfig();
+      const content = await chatJSON({
+        config,
+        messages: [{ role: 'user', content: '说"连接正常"' }],
+        stream: false,
+      });
+      res.json({ ok: true, message: 'GLM API 连接正常', response: content, config: { baseUrl: config.baseUrl, model: config.model, hasKey: !!config.apiKey } });
+    } catch (e) {
+      res.json({ ok: false, error: (e as Error).message, config: { baseUrl: getConfig().baseUrl, model: getConfig().model, hasKey: !!getConfig().apiKey } });
     }
   });
 
