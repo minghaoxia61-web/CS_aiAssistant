@@ -5,11 +5,11 @@ import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDo
 import { createHttpApi } from './api-http'
 
 const DEFAULT_CONFIG: ApiConfig = {
-  baseUrl: 'https://api.deepseek.com/v1',
+  baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
   apiKey: '',
-  model: 'deepseek-chat',
+  model: 'glm-4-flash-250414',
   temperature: 0.7,
-  maxTokens: 2048,
+  maxTokens: 0,
   topP: 1,
 }
 
@@ -45,7 +45,8 @@ export function installMockIfNeeded() {
   if (typeof window !== 'undefined' && (window as { api?: ElectronAPI }).api) return
 
   // Web 部署模式：安装 HTTP 适配器（连接真实后端）
-  if (import.meta.env.VITE_WEB_MODE === 'true') {
+  // 注意：Vite define 用 JSON.stringify 注入的是布尔值 true，不是字符串 'true'
+  if (import.meta.env.VITE_WEB_MODE === true || import.meta.env.VITE_WEB_MODE === 'true') {
     ;(window as { api?: ElectronAPI }).api = createHttpApi()
     return
   }

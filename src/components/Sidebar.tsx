@@ -20,9 +20,9 @@ export default function Sidebar() {
   const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject, theme, toggleTheme } = useStore()
 
   return (
-    <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-850/50 backdrop-blur-xl">
+    <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-850/50 backdrop-blur-xl overflow-hidden">
       {/* 品牌 */}
-      <div className="px-5 pt-6 pb-5 border-b border-amber/8">
+      <div className="px-5 pt-5 pb-4 border-b border-amber/8 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber to-amber-dim flex items-center justify-center shadow-glow">
             <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} />
@@ -35,14 +35,14 @@ export default function Sidebar() {
       </div>
 
       {/* 导航 */}
-      <nav className="px-3 py-4 space-y-1">
+      <nav className="px-3 py-3 space-y-0.5 shrink-0">
         {NAV.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group',
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group',
                 isActive
                   ? 'bg-amber/12 text-amber border border-amber/20'
                   : 'text-bone-dim hover:text-bone hover:bg-amber/6 border border-transparent'
@@ -56,7 +56,7 @@ export default function Sidebar() {
       </nav>
 
       {/* 科目列表 */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-5 pt-2 pb-1 flex items-center justify-between shrink-0">
         <span className="label !mb-0">考试科目</span>
         <button
           className="text-bone-muted hover:text-amber transition-colors text-lg leading-none"
@@ -71,7 +71,7 @@ export default function Sidebar() {
           +
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
+      <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-0.5 min-h-0">
         {subjects.length === 0 && (
           <p className="px-3 py-2 text-xs text-bone-faint">暂无科目，点击 + 创建</p>
         )}
@@ -109,9 +109,9 @@ export default function Sidebar() {
       </div>
 
       {/* 底部设置 */}
-      <div className="px-3 py-3 border-t border-amber/8 space-y-1">
+      <div className="px-3 py-2 border-t border-amber/8 space-y-0.5 shrink-0">
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
           onClick={toggleTheme}
           title={theme === 'light' ? '切换到护眼暗色' : '切换到浅色'}
         >
@@ -119,14 +119,14 @@ export default function Sidebar() {
           <span className="font-medium">{theme === 'light' ? '护眼暗色' : '浅色模式'}</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
           onClick={() => navigate('/profile')}
         >
           <User className="w-[18px] h-[18px]" strokeWidth={1.8} />
           <span className="font-medium">个人信息</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
           onClick={() => navigate('/setup')}
         >
           <Settings className="w-[18px] h-[18px]" strokeWidth={1.8} />
