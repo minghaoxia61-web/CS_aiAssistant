@@ -111,7 +111,24 @@ function decodeXmlEntities(s: string): string {
 }
 
 async function parseText(filePath: string): Promise<string> {
-  return fs.readFileSync(filePath, 'utf-8').trim();
+  const buffer = fs.readFileSync(filePath);
+  // 优先尝试 UTF-8
+  const utf8 = buffer.toString('utf-8');
+  // 如果没有替换字符（U+FFFD），说明 UTF-8 解码正确
+  if (!utf8.includes('\uFFFD')) {
+    return utf8.trim();
+  }
+  // 否则尝试 GBK（Windows 上中文 txt 常见编码）
+  try {
+    const decoder = new TextDecoder('gbk');
+    const gbk = decoder.decode(buffer);
+    if (!gbk.includes('\uFFFD')) {
+      return gbk.trim();
+    }
+  } catch {
+    // TextDecoder 不支持 gbk，忽略
+  }
+  return utf8.trim();
 }
 
 /**

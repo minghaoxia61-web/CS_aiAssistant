@@ -27,40 +27,43 @@ function readArticleContent(slug: string): string {
 
 /** 种入知识库：创建固定 ID 科目 + 逐篇导入文章 */
 export function seedKnowledgeBase(): void {
-  try {
-    const subjects = store.listSubjects();
-    const exists = subjects.find((s) => s.id === KNOWLEDGE_SUBJECT_ID);
+  // 知识库是共享数据，在共享上下文中执行
+  store.runAsShared(() => {
+    try {
+      const subjects = store.listSubjects();
+      const exists = subjects.find((s) => s.id === KNOWLEDGE_SUBJECT_ID);
 
-    if (!exists) {
-      store.createSubjectWithId(KNOWLEDGE_SUBJECT_ID, '计算机知识库', '#4a9eff');
+      if (!exists) {
+        store.createSubjectWithId(KNOWLEDGE_SUBJECT_ID, '计算机知识库', '#4a9eff');
+      }
+
+      // 检查是否已种入文章（避免重复导入）
+      const existingMaterials = store.getMaterials(KNOWLEDGE_SUBJECT_ID);
+      if (existingMaterials.length >= CATALOG.length) return;
+
+      // 导入缺失的文章
+      const existingTitles = new Set(existingMaterials.map((m) => m.filename));
+      for (const article of CATALOG) {
+        const filename = `${article.title}.md`;
+        if (existingTitles.has(filename)) continue;
+
+        const content = readArticleContent(article.slug);
+        store.addMaterial({
+          id: uuidv4(),
+          subject_id: KNOWLEDGE_SUBJECT_ID,
+          filename,
+          filetype: 'md',
+          size: content.length,
+          status: 'ready',
+          text_content: content,
+          created_at: Date.now(),
+          tag: 'lecture',
+        });
+      }
+
+      console.log(`知识库种子注入完成：${CATALOG.length} 篇文章`);
+    } catch (err) {
+      console.error('知识库种子注入失败:', err);
     }
-
-    // 检查是否已种入文章（避免重复导入）
-    const existingMaterials = store.getMaterials(KNOWLEDGE_SUBJECT_ID);
-    if (existingMaterials.length >= CATALOG.length) return;
-
-    // 导入缺失的文章
-    const existingTitles = new Set(existingMaterials.map((m) => m.filename));
-    for (const article of CATALOG) {
-      const filename = `${article.title}.md`;
-      if (existingTitles.has(filename)) continue;
-
-      const content = readArticleContent(article.slug);
-      store.addMaterial({
-        id: uuidv4(),
-        subject_id: KNOWLEDGE_SUBJECT_ID,
-        filename,
-        filetype: 'md',
-        size: content.length,
-        status: 'ready',
-        text_content: content,
-        created_at: Date.now(),
-        tag: 'lecture',
-      });
-    }
-
-    console.log(`知识库种子注入完成：${CATALOG.length} 篇文章`);
-  } catch (err) {
-    console.error('知识库种子注入失败:', err);
-  }
+  });
 }

@@ -49,6 +49,18 @@ function broadcastSSE(event: string, data: Record<string, unknown>): void {
 const activeStreams = new Map<string, { abort: () => void }>();
 
 export function registerRoutes(app: Express, upload: multer.Multer): void {
+  // ---------- 用户隔离中间件 ----------
+  // 从 X-User-Id 头获取用户 ID，用 AsyncLocalStorage 隔离每个用户的数据
+  app.use((req: Request, _res: Response, next: () => void) => {
+    const userId = (req.headers['x-user-id'] as string) || '';
+    if (userId && userId.length > 0) {
+      store.runAsUser(userId, () => next());
+    } else {
+      // 未提供 userId 的请求使用默认共享上下文
+      next();
+    }
+  });
+
   // ---------- 配置 ----------
   app.get('/api/config', (_req: Request, res: Response) => {
     res.json(getConfig());
@@ -284,8 +296,8 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
   // ---------- LLM 流式调用（SSE） ----------
   app.post('/api/llm/stream', (req: Request, res: Response) => {
-    const opts = req.body as LlmStreamOptions;
-    const requestId = uuidv4();
+    const opts = req.body as LlmStreamOptions & { requestId?: string };
+    const requestId = opts.requestId || uuidv4();
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -367,7 +379,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     }
   });
 
-  // ---------- 知识库 ----------
+  // ---------- 知识库（共享只读，在共享上下文中执行） ----------
   // GET /api/knowledge/catalog — 返回分类树和文章列表
   app.get('/api/knowledge/catalog', async (_req: Request, res: Response) => {
     try {
@@ -388,8 +400,11 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
         res.status(404).json({ error: '文章不存在' });
         return;
       }
-      const materials = store.getMaterials('__knowledge_base__');
-      const mat = materials.find((m) => m.filename === `${article.title}.md`);
+      // 知识库存储在共享上下文中，需要切换
+      const mat = store.runAsShared(() => {
+        const materials = store.getMaterials('__knowledge_base__');
+        return materials.find((m) => m.filename === `${article.title}.md`);
+      });
       if (!mat) {
         res.status(404).json({ error: '资料未找到' });
         return;

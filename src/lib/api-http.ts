@@ -20,8 +20,25 @@ import type {
 
 const API_BASE = ''
 
+// 用户隔离：从 localStorage 获取或生成唯一用户 ID
+function getUserId(): string {
+  let id = localStorage.getItem('cs_user_id')
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('cs_user_id', id)
+  }
+  return id
+}
+
+/** 为请求添加 X-User-Id 头 */
+function withUserHeaders(init?: RequestInit): RequestInit {
+  const headers = new Headers(init?.headers)
+  headers.set('X-User-Id', getUserId())
+  return { ...init, headers }
+}
+
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, init)
+  const res = await fetch(`${API_BASE}${url}`, withUserHeaders(init))
   return res.json() as Promise<T>
 }
 
@@ -156,10 +173,10 @@ export function createHttpApi(): ElectronAPI {
         }
       }
       if (!hasFiles) return []
-      const res = await fetch(`${API_BASE}/api/subjects/${subjectId}/materials`, {
+      const res = await fetch(`${API_BASE}/api/subjects/${subjectId}/materials`, withUserHeaders({
         method: 'POST',
         body: formData,
-      })
+      }))
       return res.json() as Promise<Material[]>
     },
     async getMaterials(subjectId) {
@@ -272,12 +289,12 @@ export function createHttpApi(): ElectronAPI {
       abortControllers.set(requestId, controller)
 
       // 异步读取 SSE，不阻塞 requestId 返回
-      fetch(`${API_BASE}/api/llm/stream`, {
+      fetch(`${API_BASE}/api/llm/stream`, withUserHeaders({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(opts),
+        body: JSON.stringify({ ...opts, requestId }),
         signal: controller.signal,
-      })
+      }))
         .then(async (res) => {
           const reader = res.body!.getReader()
           const decoder = new TextDecoder()
@@ -335,11 +352,11 @@ export function createHttpApi(): ElectronAPI {
       return true
     },
     async llmJSON(opts) {
-      const res = await fetch(`${API_BASE}/api/llm/json`, {
+      const res = await fetch(`${API_BASE}/api/llm/json`, withUserHeaders({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(opts),
-      })
+      }))
       return res.json()
     },
     onLlmToken(cb) {

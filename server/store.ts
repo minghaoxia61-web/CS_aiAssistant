@@ -1,12 +1,14 @@
-// Web 版数据存储（服务端）
-// 复制自 electron/store.ts，唯一改动：getDataDir 使用 process.env.DATA_DIR
-// 分层存储：
-//   db.json        —— subjects / materials(元数据，不含正文) / reviewDocs / quizSessions / profile
-//   chunks/        —— 资料正文文本缓存，每份资料一个文件 {materialId}.json
-//   index/         —— BM25/TF-IDF 索引特征，按科目 {subjectId}.json
-//   chats/         —— 每个对话一个文件 {sessionId}.json，外加 index.json 会话索引
+// Web 版数据存储（服务端）— 支持按用户隔离
+// 分层存储（每用户独立目录）：
+//   data/users/{userId}/db.json     —— subjects / materials(元数据) / reviewDocs / quizSessions / profile
+//   data/users/{userId}/chunks/     —— 资料正文文本缓存
+//   data/users/{userId}/index/      —— BM25/TF-IDF 索引特征
+//   data/users/{userId}/chats/      —— 对话记录
+// 知识库（共享，只读）：
+//   data/knowledge/                 —— 种子注入的知识库文章
 import * as fs from 'fs';
 import * as path from 'path';
+import { AsyncLocalStorage } from 'async_hooks';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   Subject,
@@ -48,11 +50,22 @@ const EMPTY_DB: DBShape = {
 
 export type CacheType = 'chunks' | 'index' | 'chats' | 'all';
 
-let dbPath = '';
-let chatsDir = '';
-let data: DBShape = { ...EMPTY_DB };
+// ---------- 按用户隔离的上下文 ----------
+const SHARED_KEY = '__shared__'; // 知识库等共享数据
+const userIdStorage = new AsyncLocalStorage<string>();
 
-const textCache = new Map<string, string>();
+interface UserContext {
+  key: string;
+  baseDir: string;
+  dbPath: string;
+  chatsDir: string;
+  chunksDir: string;
+  indexDir: string;
+  data: DBShape;
+  textCache: Map<string, string>;
+}
+
+const contextCache = new Map<string, UserContext>();
 
 function ensureDir(dir: string): string {
   try {
@@ -65,25 +78,77 @@ function ensureDir(dir: string): string {
   return dir;
 }
 
-function getDataDir(): string {
+function getBaseDataDir(): string {
   return ensureDir(path.resolve(process.env.DATA_DIR || './data'));
 }
 
-function getChatsDir(): string {
-  return ensureDir(path.join(getDataDir(), 'chats'));
+/** 获取当前请求的用户 ID（或共享 key） */
+function currentKey(): string {
+  return userIdStorage.getStore() || SHARED_KEY;
 }
 
-function getChunksDir(): string {
-  return ensureDir(path.join(getDataDir(), 'chunks'));
+/** 在指定 key 的上下文中执行 */
+export function runAsUser<T>(userId: string, fn: () => T): T {
+  return userIdStorage.run(userId, fn);
 }
 
-function getIndexDir(): string {
-  return ensureDir(path.join(getDataDir(), 'index'));
+/** 在共享上下文中执行（用于知识库） */
+export function runAsShared<T>(fn: () => T): T {
+  return userIdStorage.run(SHARED_KEY, fn);
 }
 
-function getChatIndexPath(): string {
-  return path.join(getChatsDir(), 'index.json');
+function getContext(): UserContext {
+  const key = currentKey();
+  const existing = contextCache.get(key);
+  if (existing) return existing;
+
+  const baseDir = key === SHARED_KEY
+    ? ensureDir(path.join(getBaseDataDir(), 'knowledge'))
+    : ensureDir(path.join(getBaseDataDir(), 'users', key));
+
+  const dbPath = path.join(baseDir, 'db.json');
+  const chatsDir = ensureDir(path.join(baseDir, 'chats'));
+  const chunksDir = ensureDir(path.join(baseDir, 'chunks'));
+  const indexDir = ensureDir(path.join(baseDir, 'index'));
+
+  const textCache = new Map<string, string>();
+  let data: DBShape;
+  try {
+    if (fs.existsSync(dbPath)) {
+      const parsed = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      data = { ...EMPTY_DB, ...parsed };
+      // 迁移旧数据：把内嵌的 text_content 移到 chunks/
+      let needPersist = false;
+      for (const m of data.materials as unknown as Material[]) {
+        if (m.text_content !== undefined) {
+          writeJSON(path.join(chunksDir, `${m.id}.json`), {
+            materialId: m.id,
+            text_content: m.text_content,
+            updated_at: Date.now(),
+          });
+          textCache.set(m.id, m.text_content);
+          delete (m as unknown as { text_content?: string }).text_content;
+          needPersist = true;
+        }
+      }
+      if (needPersist) writeJSON(dbPath, data);
+    } else {
+      data = { ...EMPTY_DB };
+      writeJSON(dbPath, data);
+    }
+  } catch (err) {
+    console.error('初始化用户数据库失败，重置为空:', err);
+    data = { ...EMPTY_DB };
+    writeJSON(dbPath, data);
+  }
+
+  const userCtx: UserContext = { key, baseDir, dbPath, chatsDir, chunksDir, indexDir, data, textCache };
+  contextCache.set(key, userCtx);
+  return userCtx;
 }
+
+// 供内部函数使用的快捷别名
+const ctx = getContext;
 
 function readJSON<T>(filePath: string, fallback: T): T {
   try {
@@ -104,98 +169,67 @@ function writeJSON(filePath: string, value: unknown): void {
   }
 }
 
+// ---------- 初始化（仅用于共享知识库种子注入） ----------
 export function initStore(): void {
-  const dir = getDataDir();
-  dbPath = path.join(dir, 'db.json');
-  chatsDir = getChatsDir();
-  getChunksDir();
-  getIndexDir();
-  try {
-    if (fs.existsSync(dbPath)) {
-      const raw = fs.readFileSync(dbPath, 'utf-8');
-      const parsed = JSON.parse(raw);
-      data = { ...EMPTY_DB, ...parsed };
-      let needPersist = false;
-      if (Array.isArray((parsed as Record<string, unknown>).chatSessions)) {
-        const oldSessions = (parsed as { chatSessions: ChatSession[] }).chatSessions;
-        for (const s of oldSessions) {
-          fs.writeFileSync(path.join(chatsDir, `${s.id}.json`), JSON.stringify(s, null, 2), 'utf-8');
-        }
-        delete (data as unknown as Record<string, unknown>).chatSessions;
-        needPersist = true;
-      }
-      for (const m of data.materials as unknown as Material[]) {
-        if (m.text_content !== undefined) {
-          writeMaterialText(m.id, m.text_content);
-          delete (m as unknown as { text_content?: string }).text_content;
-          needPersist = true;
-        }
-      }
-      if (needPersist) persist();
-    } else {
-      data = { ...EMPTY_DB };
-      persist();
-    }
-    if (!fs.existsSync(getChatIndexPath())) {
+  // 初始化共享上下文（知识库）
+  runAsShared(() => {
+    const c = getContext();
+    if (!fs.existsSync(path.join(c.chatsDir, 'index.json'))) {
       rebuildChatIndex();
     }
-  } catch (err) {
-    console.error('初始化数据库失败，重置为空:', err);
-    data = { ...EMPTY_DB };
-    persist();
-  }
+  });
 }
 
 function persist(): void {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('写入数据库失败:', err);
-  }
+  const c = ctx();
+  writeJSON(c.dbPath, c.data);
 }
 
 const now = () => Date.now();
 
 // ---------- Subjects ----------
 export function listSubjects(): Subject[] {
-  return data.subjects.sort((a, b) => b.created_at - a.created_at);
+  return ctx().data.subjects.sort((a, b) => b.created_at - a.created_at);
 }
 
 export function createSubject(name: string, color: string): Subject {
+  const c = ctx();
   const subject: Subject = {
     id: uuidv4(),
     name: name.trim() || '未命名科目',
     color: color || '#e8b974',
     created_at: now(),
   };
-  data.subjects.push(subject);
+  c.data.subjects.push(subject);
   persist();
   return subject;
 }
 
 /** 创建固定 ID 的科目（用于知识库种子注入） */
 export function createSubjectWithId(id: string, name: string, color: string): Subject {
+  const c = ctx();
   const subject: Subject = {
     id,
     name: name.trim() || '未命名科目',
     color: color || '#e8b974',
     created_at: now(),
   };
-  data.subjects.push(subject);
+  c.data.subjects.push(subject);
   persist();
   return subject;
 }
 
 export function deleteSubject(id: string): void {
-  const materialIds = data.materials.filter((m) => m.subject_id === id).map((m) => m.id);
+  const c = ctx();
+  const materialIds = c.data.materials.filter((m) => m.subject_id === id).map((m) => m.id);
   for (const mid of materialIds) {
     deleteMaterialText(mid);
   }
-  data.subjects = data.subjects.filter((s) => s.id !== id);
-  data.materials = data.materials.filter((m) => m.subject_id !== id);
-  data.reviewDocs = data.reviewDocs.filter((r) => r.subject_id !== id);
-  data.quizSessions = data.quizSessions.filter((q) => q.subject_id !== id);
-  data.wrongQuestions = data.wrongQuestions.filter((w) => w.subject_id !== id);
+  c.data.subjects = c.data.subjects.filter((s) => s.id !== id);
+  c.data.materials = c.data.materials.filter((m) => m.subject_id !== id);
+  c.data.reviewDocs = c.data.reviewDocs.filter((r) => r.subject_id !== id);
+  c.data.quizSessions = c.data.quizSessions.filter((q) => q.subject_id !== id);
+  c.data.wrongQuestions = c.data.wrongQuestions.filter((w) => w.subject_id !== id);
   const sessions = listChatSessions(id);
   for (const s of sessions) {
     deleteChatSession(s.id);
@@ -210,42 +244,47 @@ function withText(meta: MaterialMeta): Material {
 }
 
 export function getMaterials(subjectId: string): Material[] {
-  return data.materials
+  const c = ctx();
+  return c.data.materials
     .filter((m) => m.subject_id === subjectId)
     .map(withText)
     .sort((a, b) => b.created_at - a.created_at);
 }
 
 export function getMaterialById(id: string): Material | undefined {
-  const meta = data.materials.find((m) => m.id === id);
+  const c = ctx();
+  const meta = c.data.materials.find((m) => m.id === id);
   return meta ? withText(meta) : undefined;
 }
 
 export function addMaterial(material: Material): void {
+  const c = ctx();
   const { text_content, ...meta } = material;
-  data.materials.push(meta);
-  writeMaterialText(material.id, text_content || '');
+  c.data.materials.push(meta);
+  writeMaterialText(c, material.id, text_content || '');
   invalidateSubjectIndex(material.subject_id);
   persist();
 }
 
 export function updateMaterial(id: string, patch: Partial<Material>): void {
-  const idx = data.materials.findIndex((m) => m.id === id);
+  const c = ctx();
+  const idx = c.data.materials.findIndex((m) => m.id === id);
   if (idx < 0) return;
   const { text_content, ...metaPatch } = patch;
   if (text_content !== undefined) {
-    writeMaterialText(id, text_content);
+    writeMaterialText(c, id, text_content);
   }
-  data.materials[idx] = { ...data.materials[idx], ...metaPatch };
+  c.data.materials[idx] = { ...c.data.materials[idx], ...metaPatch };
   if (text_content !== undefined) {
-    invalidateSubjectIndex(data.materials[idx].subject_id);
+    invalidateSubjectIndex(c.data.materials[idx].subject_id);
   }
   persist();
 }
 
 export function deleteMaterial(id: string): void {
-  const meta = data.materials.find((m) => m.id === id);
-  data.materials = data.materials.filter((m) => m.id !== id);
+  const c = ctx();
+  const meta = c.data.materials.find((m) => m.id === id);
+  c.data.materials = c.data.materials.filter((m) => m.id !== id);
   deleteMaterialText(id);
   if (meta) invalidateSubjectIndex(meta.subject_id);
   persist();
@@ -259,12 +298,12 @@ interface ChunkFile {
 }
 
 function getChunksPath(materialId: string): string {
-  return path.join(getChunksDir(), `${materialId}.json`);
+  return path.join(ctx().chunksDir, `${materialId}.json`);
 }
 
-function writeMaterialText(materialId: string, text: string): void {
-  textCache.set(materialId, text);
-  writeJSON(getChunksPath(materialId), {
+function writeMaterialText(c: UserContext, materialId: string, text: string): void {
+  c.textCache.set(materialId, text);
+  writeJSON(path.join(c.chunksDir, `${materialId}.json`), {
     materialId,
     text_content: text,
     updated_at: now(),
@@ -272,18 +311,20 @@ function writeMaterialText(materialId: string, text: string): void {
 }
 
 function getMaterialText(materialId: string): string {
-  const cached = textCache.get(materialId);
+  const c = ctx();
+  const cached = c.textCache.get(materialId);
   if (cached !== undefined) return cached;
-  const file = readJSON<ChunkFile | null>(getChunksPath(materialId), null);
+  const file = readJSON<ChunkFile | null>(path.join(c.chunksDir, `${materialId}.json`), null);
   const text = file?.text_content ?? '';
-  textCache.set(materialId, text);
+  c.textCache.set(materialId, text);
   return text;
 }
 
 function deleteMaterialText(materialId: string): void {
-  textCache.delete(materialId);
+  const c = ctx();
+  c.textCache.delete(materialId);
   try {
-    fs.unlinkSync(getChunksPath(materialId));
+    fs.unlinkSync(path.join(c.chunksDir, `${materialId}.json`));
   } catch {
     // 文件不存在则忽略
   }
@@ -305,7 +346,7 @@ export interface SubjectIndexData {
 }
 
 export function getSubjectIndexPath(subjectId: string): string {
-  return path.join(getIndexDir(), `${subjectId}.json`);
+  return path.join(ctx().indexDir, `${subjectId}.json`);
 }
 
 export function saveSubjectIndex(subjectId: string, indexData: SubjectIndexData): void {
@@ -332,6 +373,10 @@ function deleteSubjectIndexFile(subjectId: string): void {
 
 // ---------- Chat Sessions ----------
 type ChatIndex = Record<string, string[]>;
+
+function getChatIndexPath(): string {
+  return path.join(ctx().chatsDir, 'index.json');
+}
 
 function loadChatIndex(): ChatIndex {
   return readJSON<ChatIndex>(getChatIndexPath(), {});
@@ -364,11 +409,12 @@ function removeFromChatIndex(sessionId: string): void {
 }
 
 function rebuildChatIndex(): void {
+  const c = ctx();
   const index: ChatIndex = {};
   try {
-    const files = fs.readdirSync(chatsDir).filter((f) => f.endsWith('.json') && f !== 'index.json');
+    const files = fs.readdirSync(c.chatsDir).filter((f) => f.endsWith('.json') && f !== 'index.json');
     for (const f of files) {
-      const s = readJSON<ChatSession | null>(path.join(chatsDir, f), null);
+      const s = readJSON<ChatSession | null>(path.join(c.chatsDir, f), null);
       if (s && s.id && s.subject_id) {
         const list = index[s.subject_id] || [];
         if (!list.includes(s.id)) list.push(s.id);
@@ -382,22 +428,23 @@ function rebuildChatIndex(): void {
 }
 
 export function listChatSessions(subjectId: string): ChatSession[] {
+  const c = ctx();
   const indexPath = getChatIndexPath();
   if (fs.existsSync(indexPath)) {
     const index = loadChatIndex();
     const ids = index[subjectId] || [];
     const sessions: ChatSession[] = [];
     for (const id of ids) {
-      const s = readJSON<ChatSession | null>(path.join(chatsDir, `${id}.json`), null);
+      const s = readJSON<ChatSession | null>(path.join(c.chatsDir, `${id}.json`), null);
       if (s && s.subject_id === subjectId) sessions.push(s);
     }
     return sessions.sort((a, b) => b.created_at - a.created_at);
   }
   const sessions: ChatSession[] = [];
   try {
-    const files = fs.readdirSync(chatsDir).filter((f) => f.endsWith('.json') && f !== 'index.json');
+    const files = fs.readdirSync(c.chatsDir).filter((f) => f.endsWith('.json') && f !== 'index.json');
     for (const f of files) {
-      const s = readJSON<ChatSession | null>(path.join(chatsDir, f), null);
+      const s = readJSON<ChatSession | null>(path.join(c.chatsDir, f), null);
       if (s && s.subject_id === subjectId) sessions.push(s);
     }
   } catch {
@@ -408,15 +455,16 @@ export function listChatSessions(subjectId: string): ChatSession[] {
 }
 
 export function getChatSession(id: string): ChatSession | undefined {
-  return readJSON<ChatSession | null>(path.join(chatsDir, `${id}.json`), null) ?? undefined;
+  return readJSON<ChatSession | null>(path.join(ctx().chatsDir, `${id}.json`), null) ?? undefined;
 }
 
 export function saveChatSession(session: ChatSession): void {
+  const c = ctx();
   try {
-    if (!fs.existsSync(chatsDir)) {
-      fs.mkdirSync(chatsDir, { recursive: true });
+    if (!fs.existsSync(c.chatsDir)) {
+      fs.mkdirSync(c.chatsDir, { recursive: true });
     }
-    fs.writeFileSync(path.join(chatsDir, `${session.id}.json`), JSON.stringify(session, null, 2), 'utf-8');
+    fs.writeFileSync(path.join(c.chatsDir, `${session.id}.json`), JSON.stringify(session, null, 2), 'utf-8');
     addToChatIndex(session.subject_id, session.id);
   } catch (err) {
     console.error('保存对话记录失败:', err);
@@ -424,7 +472,8 @@ export function saveChatSession(session: ChatSession): void {
 }
 
 export function deleteChatSession(id: string): void {
-  const filePath = path.join(chatsDir, `${id}.json`);
+  const c = ctx();
+  const filePath = path.join(c.chatsDir, `${id}.json`);
   try {
     fs.unlinkSync(filePath);
   } catch {
@@ -435,54 +484,59 @@ export function deleteChatSession(id: string): void {
 
 // ---------- Review Docs ----------
 export function listReviewDocs(subjectId: string): ReviewDoc[] {
-  return data.reviewDocs
+  return ctx().data.reviewDocs
     .filter((r) => r.subject_id === subjectId)
     .sort((a, b) => b.created_at - a.created_at);
 }
 
 export function saveReviewDoc(doc: ReviewDoc): void {
-  const idx = data.reviewDocs.findIndex((r) => r.id === doc.id);
+  const c = ctx();
+  const idx = c.data.reviewDocs.findIndex((r) => r.id === doc.id);
   if (idx >= 0) {
-    data.reviewDocs[idx] = doc;
+    c.data.reviewDocs[idx] = doc;
   } else {
-    data.reviewDocs.push(doc);
+    c.data.reviewDocs.push(doc);
   }
   persist();
 }
 
 export function deleteReviewDoc(id: string): void {
-  data.reviewDocs = data.reviewDocs.filter((r) => r.id !== id);
+  const c = ctx();
+  c.data.reviewDocs = c.data.reviewDocs.filter((r) => r.id !== id);
   persist();
 }
 
 // ---------- Quiz Sessions ----------
 export function listQuizSessions(subjectId: string): QuizSession[] {
-  return data.quizSessions
+  return ctx().data.quizSessions
     .filter((q) => q.subject_id === subjectId)
     .sort((a, b) => b.created_at - a.created_at);
 }
 
 export function saveQuizSession(session: QuizSession): void {
-  const idx = data.quizSessions.findIndex((q) => q.id === session.id);
+  const c = ctx();
+  const idx = c.data.quizSessions.findIndex((q) => q.id === session.id);
   if (idx >= 0) {
-    data.quizSessions[idx] = session;
+    c.data.quizSessions[idx] = session;
   } else {
-    data.quizSessions.push(session);
+    c.data.quizSessions.push(session);
   }
   autoAddWrongQuestions(session);
   persist();
 }
 
 export function deleteQuizSession(id: string): void {
-  data.quizSessions = data.quizSessions.filter((q) => q.id !== id);
+  const c = ctx();
+  c.data.quizSessions = c.data.quizSessions.filter((q) => q.id !== id);
   persist();
 }
 
 // ---------- Wrong Questions ----------
 function autoAddWrongQuestions(session: QuizSession): void {
+  const c = ctx();
   for (const q of session.questions) {
     if (q.correct || !q.user_answer || !q.user_answer.trim()) continue;
-    const exists = data.wrongQuestions.some(
+    const exists = c.data.wrongQuestions.some(
       (w) => w.subject_id === session.subject_id && w.question.question === q.question,
     );
     if (exists) continue;
@@ -498,39 +552,43 @@ function autoAddWrongQuestions(session: QuizSession): void {
       reviewed: false,
       review_count: 0,
     };
-    data.wrongQuestions.push(wq);
+    c.data.wrongQuestions.push(wq);
   }
 }
 
 export function listWrongQuestions(subjectId?: string): WrongQuestion[] {
+  const c = ctx();
   const list = subjectId
-    ? data.wrongQuestions.filter((w) => w.subject_id === subjectId)
-    : data.wrongQuestions;
+    ? c.data.wrongQuestions.filter((w) => w.subject_id === subjectId)
+    : c.data.wrongQuestions;
   return list.sort((a, b) => b.created_at - a.created_at);
 }
 
 export function addWrongQuestion(wq: WrongQuestion): void {
-  data.wrongQuestions.push(wq);
+  ctx().data.wrongQuestions.push(wq);
   persist();
 }
 
 export function deleteWrongQuestion(id: string): void {
-  data.wrongQuestions = data.wrongQuestions.filter((w) => w.id !== id);
+  const c = ctx();
+  c.data.wrongQuestions = c.data.wrongQuestions.filter((w) => w.id !== id);
   persist();
 }
 
 export function markWrongReviewed(id: string, reviewed: boolean): void {
-  const idx = data.wrongQuestions.findIndex((w) => w.id === id);
+  const c = ctx();
+  const idx = c.data.wrongQuestions.findIndex((w) => w.id === id);
   if (idx < 0) return;
-  const wq = data.wrongQuestions[idx];
+  const wq = c.data.wrongQuestions[idx];
   wq.reviewed = reviewed;
   if (reviewed) wq.review_count = (wq.review_count || 0) + 1;
-  data.wrongQuestions[idx] = wq;
+  c.data.wrongQuestions[idx] = wq;
   persist();
 }
 
 export function getWrongQuestionsForQuiz(subjectId: string, count: number): WrongQuestion[] {
-  const pool = data.wrongQuestions.filter((w) => w.subject_id === subjectId);
+  const c = ctx();
+  const pool = c.data.wrongQuestions.filter((w) => w.subject_id === subjectId);
   const sorted = [...pool].sort((a, b) => {
     if (a.reviewed !== b.reviewed) return a.reviewed ? 1 : -1;
     return b.created_at - a.created_at;
@@ -540,11 +598,11 @@ export function getWrongQuestionsForQuiz(subjectId: string, count: number): Wron
 
 // ---------- User Profile ----------
 export function getProfile(): UserProfile {
-  return { ...DEFAULT_PROFILE, ...data.profile };
+  return { ...DEFAULT_PROFILE, ...ctx().data.profile };
 }
 
 export function saveProfile(profile: UserProfile): void {
-  data.profile = { ...profile };
+  ctx().data.profile = { ...profile };
   persist();
 }
 
@@ -571,17 +629,18 @@ function clearDirContents(dir: string): void {
 }
 
 export function clearCache(types: string[]): void {
+  const c = ctx();
   const want = new Set(types);
   const clearAll = want.has('all');
   if (clearAll || want.has('chunks')) {
-    clearDirContents(getChunksDir());
-    textCache.clear();
+    clearDirContents(c.chunksDir);
+    c.textCache.clear();
   }
   if (clearAll || want.has('index')) {
-    clearDirContents(getIndexDir());
+    clearDirContents(c.indexDir);
   }
   if (clearAll || want.has('chats')) {
-    clearDirContents(getChatsDir());
+    clearDirContents(c.chatsDir);
     saveChatIndex({});
   }
 }
