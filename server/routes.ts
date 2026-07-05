@@ -282,14 +282,28 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
   // ---------- SSE 事件推送（material:updated） ----------
   app.get('/api/events', (req: Request, res: Response) => {
+    req.setTimeout(0);
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     });
+    res.flushHeaders();
     res.write('data: {"type":"connected"}\n\n');
     sseClients.add(res as unknown as ServerResponse);
+
+    // 心跳保持连接
+    const hb = setInterval(() => {
+      try {
+        res.write(`: heartbeat\n\n`);
+      } catch {
+        // 连接已断开
+      }
+    }, 30000);
+
     req.on('close', () => {
+      clearInterval(hb);
       sseClients.delete(res as unknown as ServerResponse);
     });
   });
@@ -299,14 +313,27 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     const opts = req.body as LlmStreamOptions & { requestId?: string };
     const requestId = opts.requestId || uuidv4();
 
+    // 禁用请求超时，SSE 需要长连接
+    req.setTimeout(0);
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no', // 禁用 nginx 缓冲
     });
+    res.flushHeaders();
 
     // 发送 init 事件，携带 requestId
     res.write(`data: ${JSON.stringify({ type: 'init', requestId })}\n\n`);
+
+    // 心跳：每 15 秒发送 SSE 注释，防止 Railway/nginx 代理超时关闭连接
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(`: heartbeat\n\n`);
+      } catch {
+        // 连接已断开
+      }
+    }, 15000);
 
     const handle = streamChat(
       {
@@ -325,6 +352,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
           }
         },
         onDone: (full) => {
+          clearInterval(heartbeat);
           activeStreams.delete(requestId);
           try {
             res.write(`data: ${JSON.stringify({ type: 'done', requestId, full })}\n\n`);
@@ -334,6 +362,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
           }
         },
         onError: (message) => {
+          clearInterval(heartbeat);
           activeStreams.delete(requestId);
           try {
             res.write(`data: ${JSON.stringify({ type: 'error', requestId, message })}\n\n`);
@@ -349,6 +378,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
     // 客户端断开时中止上游请求
     req.on('close', () => {
+      clearInterval(heartbeat);
       handle.abort();
       activeStreams.delete(requestId);
     });
