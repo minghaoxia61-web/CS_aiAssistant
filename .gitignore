@@ -12,8 +12,10 @@ dist
 dist-ssr
 dist-electron
 dist-server
-data-dev
 data
+data-dev
+data-test
+data-prod-test
 *.local
 
 # Electron 打包产物与缓存
