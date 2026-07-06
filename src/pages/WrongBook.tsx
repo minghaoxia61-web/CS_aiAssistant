@@ -186,19 +186,19 @@ export default function WrongBook() {
       <div className="flex-1 overflow-y-auto px-8 py-6">
         {/* 统计概览 */}
         <div className="grid grid-cols-4 gap-3 mb-6">
-          <div className="panel p-4">
+          <div className="panel card-3d p-4">
             <div className="text-xs text-bone-faint mb-1">错题总数</div>
             <div className="font-display text-2xl text-bone">{stats.total}</div>
           </div>
-          <div className="panel p-4">
+          <div className="panel card-3d p-4">
             <div className="text-xs text-bone-faint mb-1">未复习</div>
             <div className="font-display text-2xl text-rust">{stats.unreviewed}</div>
           </div>
-          <div className="panel p-4">
+          <div className="panel card-3d p-4">
             <div className="text-xs text-bone-faint mb-1">已复习</div>
             <div className="font-display text-2xl text-sage-glow">{stats.reviewed}</div>
           </div>
-          <div className="panel p-4">
+          <div className="panel card-3d p-4">
             <div className="text-xs text-bone-faint mb-1">题型分布</div>
             <div className="text-sm text-bone-dim flex flex-wrap gap-x-2">
               {TYPE_OPTIONS.map((t) => (
@@ -211,7 +211,7 @@ export default function WrongBook() {
         </div>
 
         {/* 筛选栏 */}
-        <div className="panel p-4 mb-4 flex items-center gap-4 flex-wrap">
+        <div className="panel card-3d p-4 mb-4 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs text-bone-faint">
             <Filter className="w-3.5 h-3.5" /> 筛选
           </div>

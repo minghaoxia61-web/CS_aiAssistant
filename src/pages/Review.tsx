@@ -113,7 +113,7 @@ export default function Review() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧历史 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-850/40">
+        <div className="w-64 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 glass-sidebar">
           <span className="label px-2">已生成资料</span>
           <div className="space-y-1 mt-2">
             {docs.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无生成记录</p>}
@@ -151,7 +151,7 @@ export default function Review() {
         {/* 主区 */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {/* 资料选择 + 生成按钮 */}
-          <div className="panel p-5 mb-6">
+          <div className="panel card-3d p-5 mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="label !mb-0">选择资料</span>
               <button className="text-xs text-amber hover:text-amber-glow" onClick={selectAll}>
@@ -279,16 +279,16 @@ function FlipCard({ index, card }: { index: number; card: { q: string; a: string
   const [flipped, setFlipped] = useState(false)
   return (
     <div
-      className={cn('flip-card h-44 cursor-pointer', flipped && 'flipped')}
+      className={cn('flip-card h-44 cursor-pointer card-3d', flipped && 'flipped')}
       onClick={() => setFlipped(!flipped)}
     >
       <div className="flip-card-inner">
-        <div className="flip-card-front rounded-2xl bg-ink-850/70 border border-amber/15 p-5 flex flex-col">
+        <div className="flip-card-front rounded-2xl glass border border-amber/15 p-5 flex flex-col">
           <span className="text-[10px] uppercase tracking-wider text-amber-dim mb-2">问题 {index + 1}</span>
           <p className="text-sm text-bone leading-relaxed flex-1">{card.q}</p>
           <span className="text-[10px] text-bone-faint mt-2">点击翻转查看答案</span>
         </div>
-        <div className="flip-card-back rounded-2xl bg-sage/10 border border-sage/25 p-5 flex flex-col">
+        <div className="flip-card-back rounded-2xl glass border border-sage/25 p-5 flex flex-col">
           <span className="text-[10px] uppercase tracking-wider text-sage-glow mb-2">答案</span>
           <p className="text-sm text-bone leading-relaxed flex-1 overflow-y-auto">{card.a}</p>
         </div>

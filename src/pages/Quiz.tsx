@@ -462,7 +462,7 @@ export default function Quiz() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧历史 */}
-        <div className="w-60 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 bg-ink-850/40">
+        <div className="w-60 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 glass-sidebar">
           <span className="label px-2">测验记录</span>
           <div className="space-y-1 mt-2">
             {history.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无记录</p>}
@@ -522,7 +522,7 @@ export default function Quiz() {
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {phase === 'config' && (
             <div className="max-w-2xl mx-auto animate-fade-in">
-              <div className="panel p-6 space-y-6">
+              <div className="panel card-3d p-6 space-y-6">
                 {/* 题型选择 */}
                 <div>
                   <span className="label">题型（可多选）</span>
@@ -750,10 +750,10 @@ export default function Quiz() {
               {/* 计时模式倒计时 */}
               {timerEnabled && (
                 <div className={cn(
-                  'flex items-center justify-center gap-2.5 mb-4 px-4 py-2.5 rounded-xl border transition-colors',
+                  'flex items-center justify-center gap-2.5 mb-4 px-5 py-3 rounded-2xl border transition-all duration-300',
                   timeLeft <= 300
-                    ? 'border-rust/40 bg-rust/10 text-rust'
-                    : 'border-amber/20 bg-amber/8 text-amber'
+                    ? 'border-rust/40 bg-rust/10 text-rust shadow-glow'
+                    : 'border-amber/20 glass text-amber'
                 )}>
                   <Timer className="w-4 h-4" />
                   <span className="font-mono text-lg font-semibold tabular-nums">{formatDuration(timeLeft)}</span>
@@ -773,9 +773,9 @@ export default function Quiz() {
                   已答 {Object.keys(answers).length} / {questions.length}
                 </span>
               </div>
-              <div className="h-1 bg-ink-800 rounded-full mb-6 overflow-hidden">
+              <div className="h-1.5 bg-ink-800 rounded-full mb-6 overflow-hidden">
                 <div
-                  className="h-full bg-amber transition-all duration-300"
+                  className="h-full progress-gradient rounded-full transition-all duration-500"
                   style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
                 />
               </div>
@@ -812,15 +812,15 @@ export default function Quiz() {
                   const answered = (answers[q.id] || '').trim() !== ''
                   return (
                     <button
-                      key={q.id}
-                      className={cn(
-                        'w-7 h-7 rounded-md text-xs font-mono transition-all',
-                        i === currentIdx
-                          ? 'bg-amber text-white'
-                          : answered
-                          ? 'bg-sage/20 text-sage-glow border border-sage/30'
-                          : 'bg-rust/15 text-rust border border-rust/25'
-                      )}
+                    key={i}
+                    className={cn(
+                      'w-7 h-7 rounded-lg text-xs font-mono transition-all duration-300',
+                      i === currentIdx
+                        ? 'bg-gradient-to-br from-amber to-amber-glow text-white shadow-glow'
+                        : answered
+                        ? 'bg-sage/20 text-sage-glow border border-sage/30'
+                        : 'bg-rust/15 text-rust border border-rust/25'
+                    )}
                       onClick={() => setCurrentIdx(i)}
                     >
                       {i + 1}
@@ -855,7 +855,7 @@ function QuestionCard({
   onAnswer: (v: string) => void
 }) {
   return (
-    <div className="panel p-6 animate-fade-in">
+    <div className="panel card-3d p-6 animate-fade-in">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber/10 text-amber-dim">
           {TYPE_LABEL[question.type]}
@@ -895,10 +895,10 @@ function QuestionCard({
               <button
                 key={i}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all',
+                  'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all duration-300',
                   selected
-                    ? 'border-amber/45 bg-amber/10 text-bone'
-                    : 'border-amber/12 bg-ink-850/50 text-bone-dim hover:border-amber/25 hover:bg-ink-800/50'
+                    ? 'border-amber/45 bg-amber/10 text-bone shadow-glow'
+                    : 'border-amber/10 bg-ink-850/30 text-bone-dim hover:border-amber/25 hover:bg-ink-800/40 hover:shadow-glow-sage'
                 )}
                 onClick={() => {
                   if (question.type === 'single') {
@@ -1180,18 +1180,24 @@ function ScoreRing({ pct }: { pct: number }) {
   return (
     <div className="relative w-24 h-24 shrink-0">
       <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(184,134,11,0.15)" strokeWidth="6" />
+        <defs>
+          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={pct >= 60 ? '#6a9a66' : '#c25a3e'} />
+            <stop offset="100%" stopColor={pct >= 60 ? '#80b87c' : '#e06a50'} />
+          </linearGradient>
+        </defs>
+        <circle cx="48" cy="48" r={r} fill="none" stroke="var(--border-amber)" strokeWidth="6" className="score-ring-track" />
         <circle
           cx="48"
           cy="48"
           r={r}
           fill="none"
-          stroke={pct >= 60 ? '#8ba888' : '#c87555'}
+          stroke="url(#scoreGradient)"
           strokeWidth="6"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+          className="score-ring-fill"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

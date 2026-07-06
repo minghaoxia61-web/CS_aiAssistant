@@ -141,7 +141,7 @@ export default function Analytics() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 章节正确率柱状图 */}
-          <div className="panel p-6">
+          <div className="panel card-3d p-6">
             <div className="flex items-center gap-2 mb-5">
               <BarChart3 className="w-4 h-4 text-amber" />
               <h3 className="font-display text-xl text-bone">章节正确率</h3>
@@ -158,7 +158,7 @@ export default function Analytics() {
           </div>
 
           {/* 进步曲线 */}
-          <div className="panel p-6">
+          <div className="panel card-3d p-6">
             <div className="flex items-center gap-2 mb-5">
               <TrendingUp className="w-4 h-4 text-amber" />
               <h3 className="font-display text-xl text-bone">测验进步曲线</h3>
@@ -172,7 +172,7 @@ export default function Analytics() {
         </div>
 
         {/* 薄弱考点排行 */}
-        <div className="panel p-6">
+        <div className="panel card-3d p-6">
           <div className="flex items-center gap-2 mb-5">
             <AlertCircle className="w-4 h-4 text-rust" />
             <h3 className="font-display text-xl text-bone">薄弱考点排行</h3>
@@ -185,7 +185,7 @@ export default function Analytics() {
               {weakPoints.map((c, i) => (
                 <div
                   key={c.chapter}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ink-850/40 border border-amber/8"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl glass border border-amber/8 transition-all duration-300 hover:border-amber/15 hover:shadow-glow"
                 >
                   <span
                     className={cn(
@@ -238,7 +238,7 @@ function SummaryCard({
       ? 'text-rust'
       : 'text-bone'
   return (
-    <div className="panel p-4">
+    <div className="panel card-3d p-4">
       <div className="flex items-center gap-1.5 text-bone-faint mb-2">
         {icon}
         <span className="text-xs">{label}</span>
@@ -265,9 +265,9 @@ function ChapterBar({ stat }: { stat: ChapterStat }) {
           </span>
         </div>
       </div>
-      <div className="h-2.5 rounded-full bg-ink-800 overflow-hidden">
+      <div className="h-3 rounded-full bg-ink-800 overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
+          className="h-full rounded-full progress-gradient transition-all duration-700 ease-out"
           style={{ width: `${stat.accuracy}%`, backgroundColor: color }}
         />
       </div>

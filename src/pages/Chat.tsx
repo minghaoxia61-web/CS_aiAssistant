@@ -142,7 +142,7 @@ export default function Chat() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧：会话 + 上下文 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 flex flex-col bg-ink-850/40">
+        <div className="w-64 shrink-0 border-r border-amber/8 flex flex-col glass-sidebar">
           {/* 会话历史 */}
           <div className="flex-1 overflow-y-auto px-3 py-4">
             <div className="flex items-center gap-2 px-2 mb-2 text-bone-muted">
@@ -223,7 +223,7 @@ export default function Chat() {
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-8 py-6">
             {!currentSession || currentSession.messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-amber/8 border border-amber/15 flex items-center justify-center text-amber/60 mb-5">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber/15 to-sage/10 border border-amber/15 flex items-center justify-center text-amber/60 mb-5 shadow-glow">
                   <MessagesSquare className="w-7 h-7" />
                 </div>
                 <h3 className="font-display text-2xl text-bone mb-2">开始你的复习对话</h3>
@@ -270,9 +270,9 @@ export default function Chat() {
           )}
 
           {/* 输入区 */}
-          <div className="border-t border-amber/8 px-8 py-4 bg-ink-850/40">
+          <div className="border-t border-amber/8 px-8 py-4 glass-sidebar">
             <div className="max-w-3xl mx-auto">
-              <div className="flex items-end gap-2 bg-ink-850/80 border border-amber/12 rounded-2xl p-2 focus-within:border-amber/35 transition-colors">
+              <div className="flex items-end gap-2 glass border border-amber/12 rounded-2xl p-2 focus-within:border-amber/35 focus-within:shadow-glow transition-all duration-300">
                 <textarea
                   className="flex-1 bg-transparent resize-none outline-none text-sm text-bone placeholder:text-bone-faint px-2 py-2 max-h-32 min-h-[40px]"
                   placeholder={config ? '输入你的问题，回车发送，Shift+回车换行' : '请先在设置页配置 API'}
@@ -360,16 +360,16 @@ function MessageBubble({ message, streaming }: { message: { id: string; role: st
     <div className={cn('flex gap-3 animate-slide-up', isUser && 'flex-row-reverse')}>
       <div
         className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-medium',
-          isUser ? 'bg-amber text-white' : 'bg-sage/20 text-sage-glow border border-sage/25'
+          'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-medium',
+          isUser ? 'bg-gradient-to-br from-amber to-amber-glow text-white shadow-glow' : 'glass border border-sage/20 text-sage-glow'
         )}
       >
         {isUser ? '我' : 'AI'}
       </div>
       <div
         className={cn(
-          'rounded-2xl px-4 py-3 max-w-[85%] group relative',
-          isUser ? 'bg-amber/12 border border-amber/20' : 'bg-ink-850/70 border border-amber/8'
+          'rounded-2xl px-4 py-3 max-w-[85%] group relative transition-all duration-300',
+          isUser ? 'msg-bubble-user' : 'msg-bubble-ai'
         )}
       >
         {isEmpty ? (

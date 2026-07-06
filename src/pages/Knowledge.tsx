@@ -146,7 +146,7 @@ export default function Knowledge() {
   return (
     <div className="flex h-full gap-0">
       {/* 左栏：分类树 */}
-      <div className="w-64 shrink-0 border-r border-amber/10 overflow-y-auto p-3">
+      <div className="w-64 shrink-0 border-r border-amber/10 overflow-y-auto p-3 glass-sidebar">
         <div className="flex items-center gap-2 mb-4 px-2">
           <BookOpen className="w-4 h-4 text-amber" />
           <span className="text-sm font-medium text-bone">知识分类</span>
@@ -207,7 +207,7 @@ export default function Knowledge() {
       </div>
 
       {/* 右栏：AI 问答 */}
-      <div className="w-80 shrink-0 border-l border-amber/10 flex flex-col">
+      <div className="w-80 shrink-0 border-l border-amber/10 flex flex-col glass-sidebar">
         <div className="flex items-center gap-2 p-3 border-b border-amber/10">
           <Sparkles className="w-4 h-4 text-amber" />
           <span className="text-sm font-medium text-bone">AI 学习助手</span>
@@ -237,10 +237,10 @@ export default function Knowledge() {
             return (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[90%] rounded-xl px-3 py-2 text-xs ${
+                  className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-xs transition-all duration-300 ${
                     msg.role === 'user'
-                      ? 'bg-amber/15 text-bone'
-                      : 'bg-ink-800/50 text-bone-muted'
+                      ? 'msg-bubble-user'
+                      : 'msg-bubble-ai'
                   }`}
                 >
                   {isStreamingThis ? (

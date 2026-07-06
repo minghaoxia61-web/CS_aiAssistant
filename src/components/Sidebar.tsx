@@ -1,4 +1,4 @@
-// 侧边导航栏
+// 侧边导航栏 - 渐变玻璃风
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon, BookMarked } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -20,11 +20,11 @@ export default function Sidebar() {
   const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject, theme, toggleTheme } = useStore()
 
   return (
-    <aside className="w-60 shrink-0 h-full flex flex-col border-r border-amber/10 bg-ink-850/50 backdrop-blur-xl overflow-hidden">
-      {/* 品牌 */}
-      <div className="px-5 pt-5 pb-4 border-b border-amber/8 shrink-0">
+    <aside className="w-60 shrink-0 h-full flex flex-col glass-sidebar border-r border-amber/8 overflow-hidden">
+      {/* 品牌 - 渐变 Logo */}
+      <div className="px-5 pt-5 pb-4 border-b border-amber/8 shrink-0 gradient-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber to-amber-dim flex items-center justify-center shadow-glow">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber to-amber-glow flex items-center justify-center shadow-glow">
             <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} />
           </div>
           <div>
@@ -34,25 +34,28 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* 导航 */}
+      {/* 导航 - 带光效 */}
       <nav className="px-3 py-3 space-y-0.5 shrink-0">
-        {NAV.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group',
-                isActive
-                  ? 'bg-amber/12 text-amber border border-amber/20'
-                  : 'text-bone-dim hover:text-bone hover:bg-amber/6 border border-transparent'
-              )
-            }
-          >
-            <item.icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-            <span className="font-medium">{item.label}</span>
-          </NavLink>
-        ))}
+        {NAV.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                cn(
+                  'nav-item-glow flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-300 group',
+                  isActive
+                    ? 'active bg-amber/10 text-amber border border-amber/20 shadow-glow'
+                    : 'text-bone-dim hover:text-bone hover:bg-amber/5 border border-transparent'
+                )
+              }
+            >
+              <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+              <span className="font-medium">{item.label}</span>
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* 科目列表 */}
@@ -79,14 +82,14 @@ export default function Sidebar() {
           <div
             key={s.id}
             className={cn(
-              'group flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all',
-              currentSubjectId === s.id ? 'bg-ink-800/80' : 'hover:bg-ink-800/40'
+              'group flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer transition-all duration-300',
+              currentSubjectId === s.id ? 'bg-ink-800/60 shadow-glow' : 'hover:bg-ink-800/30'
             )}
             onClick={() => selectSubject(s.id)}
           >
             <span
               className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: s.color, boxShadow: `0 0 8px ${s.color}80` }}
+              style={{ backgroundColor: s.color, boxShadow: `0 0 10px ${s.color}90` }}
             />
             <span className={cn('flex-1 text-sm truncate', currentSubjectId === s.id ? 'text-bone' : 'text-bone-dim')}>
               {s.name}
@@ -102,16 +105,16 @@ export default function Sidebar() {
               }}
               title="删除科目"
             >
-              ×
+              &times;
             </button>
           </div>
         ))}
       </div>
 
-      {/* 底部设置 */}
-      <div className="px-3 py-2 border-t border-amber/8 space-y-0.5 shrink-0">
+      {/* 底部设置 - 渐变分隔线 */}
+      <div className="px-3 py-2 border-t border-amber/8 space-y-0.5 shrink-0 gradient-border">
         <button
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
           onClick={toggleTheme}
           title={theme === 'light' ? '切换到护眼暗色' : '切换到浅色'}
         >
@@ -119,14 +122,14 @@ export default function Sidebar() {
           <span className="font-medium">{theme === 'light' ? '护眼暗色' : '浅色模式'}</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
           onClick={() => navigate('/profile')}
         >
           <User className="w-[18px] h-[18px]" strokeWidth={1.8} />
           <span className="font-medium">个人信息</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-bone-dim hover:text-bone hover:bg-amber/6 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
           onClick={() => navigate('/setup')}
         >
           <Settings className="w-[18px] h-[18px]" strokeWidth={1.8} />

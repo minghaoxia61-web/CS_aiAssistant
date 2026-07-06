@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI 方案 C 预览 - 柔和渐变玻璃风</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1714;
+    color: #e8e4dc;
+    font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #d4a017, #e8b94a, #6a9a66);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #9a948a;
+    font-size: 0.9rem;
+    margin-bottom: 48px;
+  }
+  .preview-card {
+    margin-bottom: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(212, 160, 23, 0.15);
+    background: rgba(35, 32, 25, 0.6);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 40px -12px rgba(0, 0, 0, 0.4), 0 0 60px -20px rgba(212, 160, 23, 0.08);
+  }
+  .preview-card img {
+    width: 100%;
+    display: block;
+    border-radius: 16px;
+  }
+  .label {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .label span {
+    font-size: 0.85rem;
+    color: #b5b0a2;
+  }
+  .label .tag {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(212, 160, 23, 0.12);
+    color: #d4a017;
+    border: 1px solid rgba(212, 160, 23, 0.2);
+  }
+  .features {
+    margin-top: 48px;
+    padding: 32px;
+    border-radius: 20px;
+    background: rgba(35, 32, 25, 0.4);
+    border: 1px solid rgba(212, 160, 23, 0.1);
+  }
+  .features h2 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    color: #d4a017;
+  }
+  .features ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .features li {
+    font-size: 0.85rem;
+    color: #b5b0a2;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .features li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4a017, #6a9a66);
+    flex-shrink: 0;
+  }
+  @media (max-width: 600px) {
+    .features ul { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>方案 C：柔和渐变玻璃风</h1>
+  <p class="subtitle">Apple/Macos 风格 · 强化玻璃拟态 + 渐变光晕 · 微动效与 3D 效果</p>
+
+  <div class="preview-card">
+    <img src=".trae-cn/work/6a4b6e644f518537b5fbeebc/preview-sidebar-main.jpg" alt="侧边栏 + 知识板块">
+    <div class="label">
+      <span>侧边栏 + 知识板块主页面</span>
+      <span class="tag">三栏布局</span>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <img src=".trae-cn/work/6a4b6e644f518537b5fbeebc/preview-chat.jpg" alt="智能对话页">
+    <div class="label">
+      <span>智能对话页</span>
+      <span class="tag">AI 问答</span>
+    </div>
+  </div>
+
+  <div class="preview-card">
+    <img src=".trae-cn/work/6a4b6e644f518537b5fbeebc/preview-quiz.jpg" alt="自我测验页">
+    <div class="label">
+      <span>自我测验页</span>
+      <span class="tag">答题界面</span>
+    </div>
+  </div>
+
+  <div class="features">
+    <h2>核心改造点</h2>
+    <ul>
+      <li>侧边栏加入琥珀-鼠尾草渐变半透明背景</li>
+      <li>背景增加大型渐变装饰 blob 营造空间感</li>
+      <li>所有面板强化 frosted glass 效果</li>
+      <li>按钮统一为胶囊形 + 渐变 hover 光效</li>
+      <li>消息气泡增加渐变边框和 hover 微动效</li>
+      <li>速记卡和测验卡片增强 3D 透视效果</li>
+      <li>输入框圆角加大，聚焦时外发光</li>
+      <li>进度条和图表使用渐变填充</li>
+      <li>空状态页面添加精致矢量装饰</li>
+      <li>滚动条和选中态统一渐变风格</li>
+      <li>暗色模式下增强光晕对比度</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

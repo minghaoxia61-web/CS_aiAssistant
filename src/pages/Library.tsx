@@ -269,11 +269,11 @@ export default function Library() {
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={cn(
-            'w-full border-2 border-dashed rounded-2xl py-10 flex flex-col items-center gap-3 text-bone-muted hover:bg-amber/4 transition-all group',
-            dragging ? 'border-amber/50 bg-amber/8' : 'border-amber/15 hover:border-amber/35',
+            'w-full border-2 border-dashed rounded-2xl py-10 flex flex-col items-center gap-3 text-bone-muted transition-all duration-300 group',
+            dragging ? 'border-amber/50 bg-amber/8 shadow-glow' : 'border-amber/15 hover:border-amber/35 hover:bg-amber/4',
           )}
         >
-          <div className="w-12 h-12 rounded-xl bg-amber/8 border border-amber/15 flex items-center justify-center group-hover:bg-amber/12 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber/12 to-sage/8 border border-amber/15 flex items-center justify-center group-hover:shadow-glow transition-all duration-300">
             <Upload className="w-5 h-5 text-amber" />
           </div>
           <div className="text-sm">
@@ -396,8 +396,8 @@ export default function Library() {
             <div
               key={m.id}
               className={cn(
-                'group flex items-center gap-3 p-4 rounded-xl bg-ink-850/60 border transition-all',
-                selectedIds.has(m.id) ? 'border-amber/40 bg-amber/5' : 'border-amber/8 hover:border-amber/20 hover:bg-ink-800/60',
+                'group flex items-center gap-3 p-4 rounded-xl glass border transition-all duration-300',
+                selectedIds.has(m.id) ? 'border-amber/40 bg-amber/5 shadow-glow' : 'border-amber/8 hover:border-amber/20 hover:bg-amber/5 hover:shadow-glow'
               )}
             >
               {/* 选择框 */}

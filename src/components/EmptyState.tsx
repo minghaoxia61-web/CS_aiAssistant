@@ -1,4 +1,4 @@
-// 空状态占位组件
+// 空状态占位组件 — 玻璃风 + 光效装饰
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -13,7 +13,7 @@ interface EmptyStateProps {
 export default function EmptyState({ icon, title, desc, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center text-center py-16 px-6', className)}>
-      <div className="w-16 h-16 rounded-2xl bg-amber/8 border border-amber/15 flex items-center justify-center text-amber/60 mb-5">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber/12 to-sage/8 border border-amber/15 flex items-center justify-center text-amber/60 mb-5 shadow-glow animate-glow-pulse">
         {icon}
       </div>
       <h3 className="font-display text-2xl text-bone mb-2">{title}</h3>

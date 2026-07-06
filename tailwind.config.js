@@ -50,20 +50,28 @@ export default {
         mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
       },
       boxShadow: {
-        glow: '0 0 24px -4px rgba(184, 134, 11, 0.2)',
-        'glow-sage': '0 0 24px -4px rgba(90, 138, 86, 0.18)',
-        panel: '0 4px 24px -8px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.05)',
+        glow: '0 0 24px -4px rgba(196, 145, 10, 0.25)',
+        'glow-sage': '0 0 24px -4px rgba(90, 138, 86, 0.2)',
+        'glow-lg': '0 0 60px -15px rgba(196, 145, 10, 0.35)',
+        panel: '0 4px 24px -8px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04)',
+        'panel-lg': '0 8px 40px -12px rgba(0, 0, 0, 0.12), 0 2px 8px -2px rgba(0, 0, 0, 0.06)',
       },
       backgroundImage: {
         'grid-faint':
           'linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px)',
         'radial-glow':
           'radial-gradient(ellipse at top, var(--glow-color), transparent 60%)',
+        'gradient-amber': 'linear-gradient(135deg, var(--amber), var(--amber-glow))',
+        'gradient-amber-soft': 'linear-gradient(135deg, var(--amber-glow), var(--amber-soft))',
+        'gradient-sidebar': 'var(--glass-sidebar-bg)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',
         'slide-up': 'slideUp 0.4s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+        'blob-float': 'blobFloat 20s ease-in-out infinite',
+        'progress-shimmer': 'progressShimmer 3s ease infinite',
       },
       keyframes: {
         fadeIn: {
@@ -71,13 +79,31 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
         },
+        glowPulse: {
+          '0%, 100%': { boxShadow: 'var(--shadow-panel)' },
+          '50%': { boxShadow: 'var(--shadow-panel), var(--shadow-glow-amber)' },
+        },
+        blobFloat: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(20px, -15px) scale(1.03)' },
+          '66%': { transform: 'translate(-15px, 10px) scale(0.97)' },
+        },
+        progressShimmer: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
+      },
+      borderRadius: {
+        '2xl': '1.25rem',
+        '3xl': '1.5rem',
       },
     },
   },
