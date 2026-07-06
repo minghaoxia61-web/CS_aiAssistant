@@ -46,9 +46,9 @@
   --grid-color: rgba(196, 145, 10, 0.02);
   --glow-color: rgba(196, 145, 10, 0.04);
   /* 装饰光晕 */
-  --blob-amber: radial-gradient(ellipse 600px 400px at 10% 10%, rgba(196, 145, 10, 0.06), transparent 70%);
-  --blob-sage: radial-gradient(ellipse 500px 350px at 85% 80%, rgba(90, 138, 86, 0.05), transparent 70%);
-  --blob-purple: radial-gradient(ellipse 400px 300px at 60% 20%, rgba(147, 112, 180, 0.03), transparent 70%);
+  --blob-amber: radial-gradient(ellipse 600px 400px at 10% 10%, rgba(196, 145, 10, 0.22), transparent 70%);
+  --blob-sage: radial-gradient(ellipse 500px 350px at 85% 80%, rgba(90, 138, 86, 0.18), transparent 70%);
+  --blob-purple: radial-gradient(ellipse 400px 300px at 60% 20%, rgba(147, 112, 180, 0.14), transparent 70%);
 }
 
 .dark {
@@ -92,9 +92,9 @@
   --grid-color: rgba(218, 165, 32, 0.02);
   --glow-color: rgba(218, 165, 32, 0.04);
   /* 装饰光晕 — 暗色下加强 */
-  --blob-amber: radial-gradient(ellipse 600px 400px at 10% 10%, rgba(218, 165, 32, 0.06), transparent 70%);
-  --blob-sage: radial-gradient(ellipse 500px 350px at 85% 80%, rgba(106, 154, 102, 0.05), transparent 70%);
-  --blob-purple: radial-gradient(ellipse 400px 300px at 60% 20%, rgba(147, 112, 180, 0.04), transparent 70%);
+  --blob-amber: radial-gradient(ellipse 600px 400px at 10% 10%, rgba(218, 165, 32, 0.28), transparent 70%);
+  --blob-sage: radial-gradient(ellipse 500px 350px at 85% 80%, rgba(106, 154, 102, 0.22), transparent 70%);
+  --blob-purple: radial-gradient(ellipse 400px 300px at 60% 20%, rgba(147, 112, 180, 0.18), transparent 70%);
 }
 
 html,
