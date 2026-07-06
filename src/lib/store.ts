@@ -125,8 +125,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   initTheme() {
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-    const theme = saved || (prefersDark ? 'dark' : 'light')
+    // 默认使用暗色主题（深空设计更适合）
+    const theme = saved || 'dark'
     set({ theme })
     document.documentElement.classList.toggle('dark', theme === 'dark')
   },

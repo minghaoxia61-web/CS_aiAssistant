@@ -20,18 +20,18 @@ export default {
           600: "var(--text-faint)",
           500: "var(--text-muted)",
         },
-        // 琥珀金主色
+        // 主色 — 电光青蓝（保持 amber 类名兼容旧代码）
         amber: {
-          DEFAULT: "var(--amber)",
-          soft: "var(--amber-soft)",
-          dim: "var(--amber-dim)",
-          glow: "var(--amber-glow)",
+          DEFAULT: "var(--accent)",
+          soft: "var(--accent-soft)",
+          dim: "var(--accent-dim)",
+          glow: "var(--accent-glow)",
         },
-        // 鼠尾草绿辅色
+        // 辅色 — 紫罗兰（保持 sage 类名兼容旧代码）
         sage: {
-          DEFAULT: "var(--sage)",
-          dim: "var(--sage-dim)",
-          glow: "var(--sage-glow)",
+          DEFAULT: "var(--violet)",
+          dim: "var(--violet-soft)",
+          glow: "var(--violet-glow)",
         },
         // 文本
         bone: {
@@ -41,8 +41,8 @@ export default {
           faint: "var(--text-faint)",
         },
         // 状态
-        rust: "var(--rust)",
-        moss: "var(--moss)",
+        rust: "var(--danger)",
+        moss: "var(--success)",
       },
       fontFamily: {
         serif: ['"Instrument Serif"', 'Georgia', 'serif'],
@@ -50,19 +50,19 @@ export default {
         mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
       },
       boxShadow: {
-        glow: '0 0 24px -4px rgba(196, 145, 10, 0.25)',
-        'glow-sage': '0 0 24px -4px rgba(90, 138, 86, 0.2)',
-        'glow-lg': '0 0 60px -15px rgba(196, 145, 10, 0.35)',
-        panel: '0 4px 24px -8px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04)',
-        'panel-lg': '0 8px 40px -12px rgba(0, 0, 0, 0.12), 0 2px 8px -2px rgba(0, 0, 0, 0.06)',
+        glow: 'var(--shadow-glow)',
+        'glow-sage': 'var(--shadow-glow-violet)',
+        'glow-lg': '0 0 60px -15px rgba(59, 130, 246, 0.5)',
+        panel: 'var(--shadow-md)',
+        'panel-lg': 'var(--shadow-lg)',
       },
       backgroundImage: {
         'grid-faint':
           'linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px)',
         'radial-glow':
-          'radial-gradient(ellipse at top, var(--glow-color), transparent 60%)',
-        'gradient-amber': 'linear-gradient(135deg, var(--amber), var(--amber-glow))',
-        'gradient-amber-soft': 'linear-gradient(135deg, var(--amber-glow), var(--amber-soft))',
+          'radial-gradient(ellipse at top, var(--grid-color), transparent 60%)',
+        'gradient-amber': 'linear-gradient(135deg, var(--accent), var(--accent-dim))',
+        'gradient-amber-soft': 'linear-gradient(135deg, var(--accent-soft), var(--accent))',
         'gradient-sidebar': 'var(--glass-sidebar-bg)',
       },
       animation: {
@@ -87,8 +87,8 @@ export default {
           '50%': { opacity: '0.5' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: 'var(--shadow-panel)' },
-          '50%': { boxShadow: 'var(--shadow-panel), var(--shadow-glow-amber)' },
+          '0%, 100%': { boxShadow: 'var(--shadow-md)' },
+          '50%': { boxShadow: 'var(--shadow-md), var(--shadow-glow)' },
         },
         blobFloat: {
           '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
