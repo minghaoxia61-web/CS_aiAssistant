@@ -125,8 +125,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   initTheme() {
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null
-    // 默认使用暗色主题（深空设计更适合）
-    const theme = saved || 'dark'
+    // 默认使用浅色主题
+    const theme = saved || 'light'
     set({ theme })
     document.documentElement.classList.toggle('dark', theme === 'dark')
   },

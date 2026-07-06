@@ -1,6 +1,6 @@
-// 侧边导航栏 - 渐变玻璃风
+// 侧边导航栏 — Aurora 精致排版
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon, BookMarked } from 'lucide-react'
+import { Settings, Library, MessagesSquare, BookOpen, ListChecks, BarChart3, BookX, GraduationCap, User, Sun, Moon, BookMarked, Plus } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
@@ -20,22 +20,23 @@ export default function Sidebar() {
   const { subjects, currentSubjectId, selectSubject, deleteSubject, createSubject, theme, toggleTheme } = useStore()
 
   return (
-    <aside className="w-60 shrink-0 h-full flex flex-col glass-sidebar border-r border-amber/8 overflow-hidden">
-      {/* 品牌 - 渐变 Logo */}
-      <div className="px-5 pt-5 pb-4 border-b border-amber/8 shrink-0 gradient-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber to-amber-glow flex items-center justify-center shadow-glow">
+    <aside className="w-[240px] shrink-0 h-full flex flex-col glass-sidebar border-r border-[var(--border)] overflow-hidden">
+      {/* 品牌 */}
+      <div className="px-5 pt-6 pb-5 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-dim)] flex items-center justify-center shadow-glow">
             <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} />
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
           </div>
           <div>
-            <h1 className="font-display text-xl leading-none text-bone">CS_Assistant</h1>
-            <p className="text-[10px] tracking-widest uppercase text-bone-muted mt-1">智能复习助手</p>
+            <h1 className="font-display text-[20px] leading-none text-bone">CS_Assistant</h1>
+            <p className="text-[10px] tracking-[0.15em] uppercase text-bone-muted mt-1.5 font-medium">智能复习助手</p>
           </div>
         </div>
       </div>
 
-      {/* 导航 - 带光效 */}
-      <nav className="px-3 py-3 space-y-0.5 shrink-0">
+      {/* 导航 */}
+      <nav className="px-3 py-2 space-y-0.5 shrink-0">
         {NAV.map((item) => {
           const Icon = item.icon
           return (
@@ -44,58 +45,68 @@ export default function Sidebar() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'nav-item-glow flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-300 group',
+                  'nav-item-glow flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 group relative',
                   isActive
-                    ? 'active bg-amber/10 text-amber border border-amber/20 shadow-glow'
-                    : 'text-bone-dim hover:text-bone hover:bg-amber/5 border border-transparent'
+                    ? 'active bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
+                    : 'text-bone-dim hover:text-bone hover:bg-[var(--bg-hover)] border border-transparent'
                 )
               }
             >
-              <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
-              <span className="font-medium">{item.label}</span>
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-[var(--accent)]" />
+                  )}
+                  <Icon className="w-[16px] h-[16px]" strokeWidth={1.8} />
+                  <span className="font-medium">{item.label}</span>
+                </>
+              )}
             </NavLink>
           )
         })}
       </nav>
 
+      {/* 分隔线 */}
+      <div className="mx-5 my-3 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent shrink-0" />
+
       {/* 科目列表 */}
-      <div className="px-5 pt-2 pb-1 flex items-center justify-between shrink-0">
+      <div className="px-5 pb-2 flex items-center justify-between shrink-0">
         <span className="label !mb-0">考试科目</span>
         <button
-          className="text-bone-muted hover:text-amber transition-colors text-lg leading-none"
+          className="w-5 h-5 flex items-center justify-center rounded-md text-bone-muted hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-all"
           onClick={async () => {
             const name = await promptDialog('请输入科目名称（如：操作系统）', { placeholder: '操作系统' })
             if (name?.trim()) {
-              await createSubject(name.trim(), '#e8b974')
+              await createSubject(name.trim(), '#3b82f6')
             }
           }}
           title="新建科目"
         >
-          +
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.2} />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-0.5 min-h-0">
+      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5 min-h-0">
         {subjects.length === 0 && (
-          <p className="px-3 py-2 text-xs text-bone-faint">暂无科目，点击 + 创建</p>
+          <p className="px-3 py-3 text-xs text-bone-faint text-center">暂无科目，点击 + 创建</p>
         )}
         {subjects.map((s) => (
           <div
             key={s.id}
             className={cn(
-              'group flex items-center gap-2.5 px-3 py-2 rounded-xl cursor-pointer transition-all duration-300',
-              currentSubjectId === s.id ? 'bg-ink-800/60 shadow-glow' : 'hover:bg-ink-800/30'
+              'group flex items-center gap-2.5 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-200',
+              currentSubjectId === s.id ? 'bg-[var(--bg-elevated)] shadow-sm' : 'hover:bg-[var(--bg-hover)]'
             )}
             onClick={() => selectSubject(s.id)}
           >
             <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: s.color, boxShadow: `0 0 10px ${s.color}90` }}
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: s.color, boxShadow: `0 0 8px ${s.color}80` }}
             />
-            <span className={cn('flex-1 text-sm truncate', currentSubjectId === s.id ? 'text-bone' : 'text-bone-dim')}>
+            <span className={cn('flex-1 text-[13px] truncate', currentSubjectId === s.id ? 'text-bone font-medium' : 'text-bone-dim')}>
               {s.name}
             </span>
             <button
-              className="opacity-0 group-hover:opacity-100 text-bone-faint hover:text-rust transition-all text-xs"
+              className="opacity-0 group-hover:opacity-100 text-bone-faint hover:text-rust transition-all text-xs w-4 h-4 flex items-center justify-center rounded"
               onClick={async (e) => {
                 e.stopPropagation()
                 const ok = await confirmDialog(`确认删除科目「${s.name}」及其所有资料？`, { danger: true })
@@ -105,34 +116,34 @@ export default function Sidebar() {
               }}
               title="删除科目"
             >
-              &times;
+              ×
             </button>
           </div>
         ))}
       </div>
 
-      {/* 底部设置 - 渐变分隔线 */}
-      <div className="px-3 py-2 border-t border-amber/8 space-y-0.5 shrink-0 gradient-border">
+      {/* 底部设置 */}
+      <div className="px-3 py-3 border-t border-[var(--border)] space-y-0.5 shrink-0">
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-bone-dim hover:text-bone hover:bg-[var(--bg-hover)] transition-all duration-200"
           onClick={toggleTheme}
-          title={theme === 'light' ? '切换到护眼暗色' : '切换到浅色'}
+          title={theme === 'light' ? '切换到暗色' : '切换到浅色'}
         >
-          {theme === 'light' ? <Moon className="w-[18px] h-[18px]" strokeWidth={1.8} /> : <Sun className="w-[18px] h-[18px]" strokeWidth={1.8} />}
-          <span className="font-medium">{theme === 'light' ? '护眼暗色' : '浅色模式'}</span>
+          {theme === 'light' ? <Moon className="w-[16px] h-[16px]" strokeWidth={1.8} /> : <Sun className="w-[16px] h-[16px]" strokeWidth={1.8} />}
+          <span className="font-medium">{theme === 'light' ? '暗色模式' : '浅色模式'}</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-bone-dim hover:text-bone hover:bg-[var(--bg-hover)] transition-all duration-200"
           onClick={() => navigate('/profile')}
         >
-          <User className="w-[18px] h-[18px]" strokeWidth={1.8} />
+          <User className="w-[16px] h-[16px]" strokeWidth={1.8} />
           <span className="font-medium">个人信息</span>
         </button>
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-bone-dim hover:text-bone hover:bg-amber/5 transition-all duration-300"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] text-bone-dim hover:text-bone hover:bg-[var(--bg-hover)] transition-all duration-200"
           onClick={() => navigate('/setup')}
         >
-          <Settings className="w-[18px] h-[18px]" strokeWidth={1.8} />
+          <Settings className="w-[16px] h-[16px]" strokeWidth={1.8} />
           <span className="font-medium">API 设置</span>
         </button>
       </div>

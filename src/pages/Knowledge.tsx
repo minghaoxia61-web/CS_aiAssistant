@@ -144,12 +144,12 @@ export default function Knowledge() {
   }
 
   return (
-    <div className="flex h-full gap-0">
+    <div className="flex h-full">
       {/* 左栏：分类树 */}
-      <div className="w-64 shrink-0 border-r border-amber/10 overflow-y-auto p-3 glass-sidebar">
+      <div className="w-[240px] shrink-0 border-r border-[var(--border)] overflow-y-auto p-3 glass-sidebar">
         <div className="flex items-center gap-2 mb-4 px-2">
-          <BookOpen className="w-4 h-4 text-amber" />
-          <span className="text-sm font-medium text-bone">知识分类</span>
+          <BookOpen className="w-4 h-4 text-[var(--accent)]" />
+          <span className="text-[13px] font-medium text-bone">知识分类</span>
         </div>
         {categories.map((cat) => {
           const Icon = ICON_MAP[cat.icon] || BookOpen
@@ -158,23 +158,23 @@ export default function Knowledge() {
           return (
             <div key={cat.id} className="mb-1">
               <button
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg hover:bg-amber/5 text-left transition-colors"
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-left transition-all duration-200"
                 onClick={() => toggleCat(cat.id)}
               >
                 {expanded ? <ChevronDown className="w-3.5 h-3.5 text-bone-faint" /> : <ChevronRight className="w-3.5 h-3.5 text-bone-faint" />}
-                <Icon className="w-3.5 h-3.5 text-amber/70" />
+                <Icon className="w-3.5 h-3.5 text-[var(--accent)]/70" />
                 <span className="text-xs font-medium text-bone-muted">{cat.name}</span>
                 <span className="text-xs text-bone-faint ml-auto">{catArticles.length}</span>
               </button>
               {expanded && (
-                <div className="ml-6 mt-0.5 space-y-0.5">
+                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[var(--border)] pl-2">
                   {catArticles.map((art) => (
                     <button
                       key={art.slug}
-                      className={`block w-full text-left px-2 py-1 rounded text-xs transition-colors ${
+                      className={`block w-full text-left px-2 py-1 rounded text-xs transition-all duration-200 ${
                         currentSlug === art.slug
-                          ? 'bg-amber/10 text-amber font-medium'
-                          : 'text-bone-faint hover:bg-amber/5 hover:text-bone-muted'
+                          ? 'bg-[var(--accent)]/10 text-[var(--accent)] font-medium'
+                          : 'text-bone-faint hover:bg-[var(--bg-hover)] hover:text-bone-muted'
                       }`}
                       onClick={() => setCurrentSlug(art.slug)}
                     >
@@ -189,10 +189,10 @@ export default function Knowledge() {
       </div>
 
       {/* 中栏：文章内容 */}
-      <div className="flex-1 overflow-y-auto p-6 min-w-0">
+      <div className="flex-1 overflow-y-auto p-8 min-w-0">
         {loadingContent ? (
           <div className="flex items-center justify-center h-32">
-            <Loader2 className="w-5 h-5 animate-spin text-amber" />
+            <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
           </div>
         ) : content ? (
           <article className="max-w-3xl mx-auto">
@@ -207,22 +207,22 @@ export default function Knowledge() {
       </div>
 
       {/* 右栏：AI 问答 */}
-      <div className="w-80 shrink-0 border-l border-amber/10 flex flex-col glass-sidebar">
-        <div className="flex items-center gap-2 p-3 border-b border-amber/10">
-          <Sparkles className="w-4 h-4 text-amber" />
-          <span className="text-sm font-medium text-bone">AI 学习助手</span>
+      <div className="w-[320px] shrink-0 border-l border-[var(--border)] flex flex-col glass-sidebar">
+        <div className="flex items-center gap-2 p-3 border-b border-[var(--border)]">
+          <Sparkles className="w-4 h-4 text-[var(--accent)]" />
+          <span className="text-[13px] font-medium text-bone">AI 学习助手</span>
         </div>
         {/* 对话区 */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
           {chatMsgs.length === 0 && (
             <div className="text-center text-bone-faint text-xs mt-8 px-4">
               <p className="mb-2">基于当前文章内容智能问答</p>
               <p>试着问：</p>
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-0.5">
                 {['这个知识点怎么理解？', '能给我举个例子吗？', '和...有什么区别？'].map((s) => (
                   <button
                     key={s}
-                    className="block w-full text-left px-2 py-1 rounded text-bone-muted hover:bg-amber/5 text-xs"
+                    className="block w-full text-left px-2 py-1.5 rounded text-bone-muted hover:bg-[var(--bg-hover)] hover:text-[var(--accent)] text-xs transition-all"
                     onClick={() => setInput(s)}
                   >
                     {s}
@@ -237,7 +237,7 @@ export default function Knowledge() {
             return (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-xs transition-all duration-300 ${
+                  className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-xs transition-all duration-200 ${
                     msg.role === 'user'
                       ? 'msg-bubble-user'
                       : 'msg-bubble-ai'
@@ -256,7 +256,7 @@ export default function Knowledge() {
           })}
         </div>
         {/* 输入区 */}
-        <div className="p-3 border-t border-amber/10">
+        <div className="p-3 border-t border-[var(--border)] shrink-0">
           <div className="flex gap-2">
             <input
               className="input flex-1 text-xs"

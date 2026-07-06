@@ -142,33 +142,33 @@ export default function Chat() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧：会话 + 上下文 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 flex flex-col glass-sidebar">
+        <div className="w-[260px] shrink-0 border-r border-[var(--border)] flex flex-col glass-sidebar">
           {/* 会话历史 */}
-          <div className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="flex-1 overflow-y-auto px-3 py-4 min-h-0">
             <div className="flex items-center gap-2 px-2 mb-2 text-bone-muted">
               <History className="w-3.5 h-3.5" />
               <span className="label !mb-0">对话历史</span>
             </div>
-            <div className="space-y-1">
-              {sessions.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无对话</p>}
+            <div className="space-y-0.5">
+              {sessions.length === 0 && <p className="px-2 py-3 text-xs text-bone-faint text-center">暂无对话</p>}
               {sessions.map((s) => (
                 <div
                   key={s.id}
                   className={cn(
-                    'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all',
-                    currentSession?.id === s.id ? 'bg-amber/10 text-amber' : 'text-bone-dim hover:bg-ink-800/50'
+                    'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all duration-200',
+                    currentSession?.id === s.id ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20' : 'text-bone-dim hover:bg-[var(--bg-hover)] border border-transparent'
                   )}
                   onClick={() => selectSession(s)}
                 >
-                  <span className="flex-1 text-sm truncate">{s.title}</span>
+                  <span className="flex-1 text-[13px] truncate">{s.title}</span>
                   <button
-                    className="opacity-0 group-hover:opacity-100 text-bone-faint hover:text-rust text-xs"
+                    className="opacity-0 group-hover:opacity-100 text-bone-faint hover:text-rust text-xs w-4 h-4 flex items-center justify-center rounded transition-all"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteSession(s.id)
                     }}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               ))}
@@ -176,32 +176,32 @@ export default function Chat() {
           </div>
 
           {/* 上下文资料 */}
-          <div className="border-t border-amber/8 px-3 py-4 max-h-[45%] flex flex-col">
+          <div className="border-t border-[var(--border)] px-3 py-4 max-h-[45%] flex flex-col shrink-0">
             <div className="flex items-center justify-between px-2 mb-2">
               <div className="flex items-center gap-2">
                 <Paperclip className="w-3.5 h-3.5 text-bone-muted" />
                 <span className="label !mb-0">引用资料</span>
               </div>
               {readyMaterials.length > 0 && (
-                <button className="text-xs text-amber hover:text-amber-glow" onClick={selectAll}>
+                <button className="text-xs text-[var(--accent)] hover:text-[var(--accent-glow)] transition-colors" onClick={selectAll}>
                   {selectedMatIds.size === readyMaterials.length ? '取消全选' : '全选'}
                 </button>
               )}
             </div>
-            <div className="overflow-y-auto flex-1 space-y-1">
+            <div className="overflow-y-auto flex-1 space-y-0.5 min-h-0">
               {readyMaterials.length === 0 && (
-                <p className="px-2 text-xs text-bone-faint">暂无可用资料</p>
+                <p className="px-2 py-3 text-xs text-bone-faint text-center">暂无可用资料</p>
               )}
               {readyMaterials.map((m) => (
                 <label
                   key={m.id}
-                  className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg hover:bg-ink-800/50 cursor-pointer"
+                  className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] cursor-pointer transition-all"
                 >
                   <input
                     type="checkbox"
                     checked={selectedMatIds.has(m.id)}
                     onChange={() => toggleMaterial(m.id)}
-                    className="mt-0.5 accent-amber"
+                    className="mt-0.5 accent-[var(--accent)]"
                   />
                   <span className="text-xs text-bone-dim leading-snug flex-1">{m.filename}</span>
                 </label>
@@ -209,7 +209,7 @@ export default function Chat() {
             </div>
             {/* Token 估算提示 */}
             {selectedMatIds.size > 0 && (
-              <div className={cn('mt-2 px-2 py-1.5 rounded text-[10px]', estimatedTokens > 30000 ? 'text-moss bg-moss/8' : 'text-bone-faint bg-ink-850/60')}>
+              <div className={cn('mt-2 px-2 py-1.5 rounded text-[10px]', estimatedTokens > 30000 ? 'text-moss bg-moss/8' : 'text-bone-faint bg-[var(--bg-elevated)]')}>
                 ≈ {estimatedTokens.toLocaleString()} tokens
                 {estimatedTokens > 30000 ? ' · RAG 检索模式（仅发送相关片段）' : ' · 全量发送'}
               </div>
@@ -223,11 +223,14 @@ export default function Chat() {
           <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-8 py-6">
             {!currentSession || currentSession.messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber/15 to-sage/10 border border-amber/15 flex items-center justify-center text-amber/60 mb-5 shadow-glow">
-                  <MessagesSquare className="w-7 h-7" />
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent)]/25 to-[var(--violet)]/20 rounded-3xl blur-2xl" />
+                  <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent)]/15 to-[var(--violet)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)]">
+                    <MessagesSquare className="w-7 h-7" />
+                  </div>
                 </div>
-                <h3 className="font-display text-2xl text-bone mb-2">开始你的复习对话</h3>
-                <p className="text-sm text-bone-muted max-w-md mb-6">
+                <h3 className="font-display text-2xl text-bone mb-2 tracking-tight">开始你的复习对话</h3>
+                <p className="text-sm text-bone-muted max-w-md mb-6 leading-relaxed">
                   {selectedMatIds.size > 0
                     ? `已引用 ${selectedMatIds.size} 份资料，AI 将基于这些内容回答`
                     : '勾选左侧资料作为上下文，AI 会优先基于资料内容作答'}
@@ -236,7 +239,7 @@ export default function Chat() {
                   {QUICK_CMDS.map((cmd) => (
                     <button
                       key={cmd}
-                      className="chip border-amber/20 text-bone-dim hover:border-amber/40 hover:text-amber"
+                      className="chip border-[var(--border-strong)] text-bone-dim hover:border-[var(--accent)]/40 hover:text-[var(--accent)] hover:bg-[var(--accent)]/5"
                       onClick={() => handleSend(cmd)}
                     >
                       {cmd}
@@ -255,8 +258,8 @@ export default function Chat() {
 
           {/* 流式阶段提示 */}
           {streaming && streamPhase !== 'idle' && (
-            <div className="px-8 py-1.5 text-xs text-amber flex items-center gap-2 animate-fade-in">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber animate-pulse-soft" />
+            <div className="px-8 py-1.5 text-xs text-[var(--accent)] flex items-center gap-2 animate-fade-in">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse-soft" />
               {streamPhase === 'retrieving' ? '检索知识点中…' : 'AI 推理中…'}
             </div>
           )}
@@ -270,9 +273,9 @@ export default function Chat() {
           )}
 
           {/* 输入区 */}
-          <div className="border-t border-amber/8 px-8 py-4 glass-sidebar">
+          <div className="border-t border-[var(--border)] px-8 py-4 glass-sidebar shrink-0">
             <div className="max-w-3xl mx-auto">
-              <div className="flex items-end gap-2 glass border border-amber/12 rounded-2xl p-2 focus-within:border-amber/35 focus-within:shadow-glow transition-all duration-300">
+              <div className="flex items-end gap-2 glass rounded-xl p-2 border border-[var(--border-strong)] focus-within:border-[var(--accent)]/40 focus-within:shadow-glow transition-all duration-200">
                 <textarea
                   className="flex-1 bg-transparent resize-none outline-none text-sm text-bone placeholder:text-bone-faint px-2 py-2 max-h-32 min-h-[40px]"
                   placeholder={config ? '输入你的问题，回车发送，Shift+回车换行' : '请先在设置页配置 API'}
@@ -309,11 +312,11 @@ export default function Chat() {
               )}
               <div className="flex items-center gap-3 mt-2">
                 <button
-                  className={cn('flex items-center gap-1.5 text-xs transition-colors', localOnly ? 'text-amber' : 'text-bone-faint hover:text-bone-muted')}
+                  className={cn('flex items-center gap-1.5 text-xs transition-colors', localOnly ? 'text-[var(--accent)]' : 'text-bone-faint hover:text-bone-muted')}
                   onClick={() => setLocalOnly(!localOnly)}
                   title="开启后AI仅基于已选资料回答，不引入外部知识"
                 >
-                  <span className={cn('inline-flex items-center justify-center w-7 h-3.5 rounded-full transition-colors', localOnly ? 'bg-amber' : 'bg-ink-700')}>
+                  <span className={cn('inline-flex items-center justify-center w-7 h-3.5 rounded-full transition-colors', localOnly ? 'bg-[var(--accent)]' : 'bg-[var(--bg-active)]')}>
                     <span className={cn('inline-block w-2.5 h-2.5 rounded-full bg-white transition-transform', localOnly && 'translate-x-3.5')} />
                   </span>
                   仅用本地资料
@@ -360,15 +363,15 @@ function MessageBubble({ message, streaming }: { message: { id: string; role: st
     <div className={cn('flex gap-3 animate-slide-up', isUser && 'flex-row-reverse')}>
       <div
         className={cn(
-          'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-medium',
-          isUser ? 'bg-gradient-to-br from-amber to-amber-glow text-white shadow-glow' : 'glass border border-sage/20 text-sage-glow'
+          'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-[11px] font-medium',
+          isUser ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-dim)] text-white shadow-glow' : 'glass border border-[var(--border-strong)] text-[var(--violet)]'
         )}
       >
         {isUser ? '我' : 'AI'}
       </div>
       <div
         className={cn(
-          'rounded-2xl px-4 py-3 max-w-[85%] group relative transition-all duration-300',
+          'rounded-xl px-4 py-3 max-w-[85%] group relative transition-all duration-200',
           isUser ? 'msg-bubble-user' : 'msg-bubble-ai'
         )}
       >
