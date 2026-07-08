@@ -10,6 +10,7 @@ import { useStore } from '@/lib/store'
 import { useChatStore } from '@/lib/chat-store'
 import { confirmDialog } from '@/lib/dialog'
 import { estimateMaterialsTokens } from '@/lib/llm'
+import { onModelStatusChange, type ModelStatus } from '@/lib/vector'
 import { cn } from '@/lib/utils'
 import type { Material } from '@/shared/types'
 
@@ -29,11 +30,17 @@ export default function Chat() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [selectedMatIds, setSelectedMatIds] = useState<Set<string>>(new Set())
   const [input, setInput] = useState('')
+  const [modelStatus, setModelStatus] = useState<ModelStatus>('idle')
   const scrollRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
   const loadedSubjectRef = useRef<string | null>(null) // 避免重复加载同一科目
 
   const subject = subjects.find((s) => s.id === currentSubjectId)
+
+  // 订阅向量模型加载状态（首次对话时模型下载进度反馈）
+  useEffect(() => {
+    return onModelStatusChange(setModelStatus)
+  }, [])
 
   const loadMaterials = useCallback(async () => {
     if (!currentSubjectId) return
@@ -260,7 +267,11 @@ export default function Chat() {
           {streaming && streamPhase !== 'idle' && (
             <div className="px-8 py-1.5 text-xs text-[var(--accent)] flex items-center gap-2 animate-fade-in">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse-soft" />
-              {streamPhase === 'retrieving' ? '检索知识点中…' : 'AI 推理中…'}
+              {streamPhase === 'retrieving'
+                ? modelStatus === 'loading'
+                  ? '正在加载向量模型（首次约 23MB，请稍候）…'
+                  : '检索知识点中…'
+                : 'AI 推理中…'}
             </div>
           )}
 

@@ -8,6 +8,15 @@ export default defineConfig(({ mode }) => ({
   build: {
     sourcemap: 'hidden',
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-markdown': ['react-markdown', 'remark-gfm', 'remark-math', 'rehype-highlight', 'rehype-katex'],
+          'vendor-katex': ['katex'],
+        },
+      },
+    },
   },
   define: {
     'import.meta.env.VITE_WEB_MODE': JSON.stringify(mode === 'web'),

@@ -202,7 +202,10 @@ async function getEmbeddingPipeline() {
 }
 
 async function embedTexts(texts: string[], taskId: string): Promise<number[][]> {
+  // 通知主线程：模型正在加载（首次约 23MB，后续命中缓存即时完成）
+  send({ taskId, event: 'progress', current: 0, total: texts.length, message: 'loading-model' })
   const extractor = await getEmbeddingPipeline()
+  send({ taskId, event: 'progress', current: 0, total: texts.length, message: `向量化 0/${texts.length}` })
   const BATCH = 8 // 批量向量化，平衡吞吐与内存
   const result: number[][] = []
   for (let i = 0; i < texts.length; i += BATCH) {

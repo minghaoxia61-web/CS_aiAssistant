@@ -5,12 +5,21 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeKatex from 'rehype-katex'
-import mermaid from 'mermaid'
 import { Copy, Check, Play, Terminal, AlertCircle } from 'lucide-react'
 import 'katex/dist/katex.min.css'
 
-// 初始化 Mermaid（浅色主题）
-mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'inherit' })
+// Mermaid 懒加载：仅在遇到 mermaid 代码块时才加载 ~1MB 的图表库
+let mermaidPromise: Promise<typeof import('mermaid')['default']> | null = null
+function loadMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then((m) => {
+      const mermaid = m.default
+      mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'inherit' })
+      return mermaid
+    })
+  }
+  return mermaidPromise
+}
 
 interface MarkdownProps {
   content: string
@@ -35,38 +44,49 @@ function extractText(node: ReactNode): string {
 function MermaidBlock({ chart }: { chart: string }) {
   const [svg, setSvg] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
   const idRef = useRef(`mmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
 
   useEffect(() => {
     let cancelled = false
-    // trim 前后空白，避免 Mermaid 解析失败
     const trimmed = chart.trim()
     if (!trimmed) {
       setError('图表内容为空')
+      setLoading(false)
       return
     }
-    // 使用唯一 id 避免冲突
     const renderId = `${idRef.current}-${Date.now()}`
-    mermaid.parse(trimmed)
-      .then(() => {
+    loadMermaid()
+      .then((mermaid) => {
         if (cancelled) return
-        return mermaid.render(renderId, trimmed)
+        return mermaid.parse(trimmed).then(() => {
+          if (cancelled) return
+          return mermaid.render(renderId, trimmed)
+        })
       })
       .then(({ svg }) => {
-        if (!cancelled && svg) { setSvg(svg); setError('') }
+        if (!cancelled && svg) { setSvg(svg); setError(''); setLoading(false) }
       })
-      .catch((e) => {
-        if (!cancelled) {
-          // 重试一次：有时是 mermaid 内部状态问题
-          const retryId = `${idRef.current}-retry-${Date.now()}`
-          mermaid.render(retryId, trimmed)
-            .then(({ svg }) => { if (!cancelled) { setSvg(svg); setError('') } })
-            .catch((e2) => { if (!cancelled) setError((e2 as Error).message || String(e2)) })
-        }
+      .catch(() => {
+        if (cancelled) return
+        // 重试一次：有时是 mermaid 内部状态问题
+        const retryId = `${idRef.current}-retry-${Date.now()}`
+        loadMermaid()
+          .then((mermaid) => mermaid.render(retryId, trimmed))
+          .then(({ svg }) => { if (!cancelled) { setSvg(svg); setError(''); setLoading(false) } })
+          .catch((e2) => { if (!cancelled) { setError((e2 as Error).message || String(e2)); setLoading(false) } })
       })
     return () => { cancelled = true }
   }, [chart])
 
+  if (loading && !error) {
+    return (
+      <div className="my-3 flex justify-center items-center rounded-lg bg-white/40 border border-amber/10 p-6">
+        <div className="w-5 h-5 border-2 border-amber/30 border-t-amber rounded-full animate-spin" />
+        <span className="ml-2 text-xs text-bone-faint">图表加载中…</span>
+      </div>
+    )
+  }
   if (error) {
     return (
       <div className="my-3 rounded-lg border border-rust/30 bg-rust/5 p-3 text-xs text-rust">

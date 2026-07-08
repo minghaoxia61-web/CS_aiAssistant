@@ -105,13 +105,46 @@ export async function ensureSubjectVectors(
   return loadSubjectVectors(subjectId)
 }
 
+// ---------- 模型加载状态（供 UI 展示进度） ----------
+export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error'
+const modelListeners = new Set<(status: ModelStatus) => void>()
+let modelStatus: ModelStatus = 'idle'
+
+export function getModelStatus(): ModelStatus {
+  return modelStatus
+}
+
+/** 订阅模型状态变化，立即回调一次当前状态 */
+export function onModelStatusChange(cb: (status: ModelStatus) => void): () => void {
+  modelListeners.add(cb)
+  cb(modelStatus)
+  return () => {
+    modelListeners.delete(cb)
+  }
+}
+
+function setModelStatus(s: ModelStatus): void {
+  modelStatus = s
+  for (const cb of modelListeners) cb(s)
+}
+
 // ---------- 查询向量化 ----------
 /** 单条查询向量化（失败返回 null，调用方回退纯 BM25） */
 export async function embedQuery(text: string): Promise<Float32Array | null> {
+  setModelStatus('loading')
   try {
-    const { vectors } = await submitEmbedTask([text])
+    const { vectors } = await submitEmbedTask([text], (p) => {
+      // Worker 在加载模型阶段会发送 message='loading-model'
+      if (p.message === 'loading-model') {
+        setModelStatus('loading')
+      } else if (modelStatus === 'loading') {
+        setModelStatus('ready')
+      }
+    })
+    setModelStatus('ready')
     return new Float32Array(vectors[0])
   } catch {
+    setModelStatus('error')
     return null
   }
 }
