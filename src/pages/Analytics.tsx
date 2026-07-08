@@ -2,11 +2,14 @@
 // 图表使用纯 SVG/CSS 实现，不引入外部图表库
 import { useEffect, useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import { BarChart3, TrendingUp, AlertCircle, Target, Award, ListChecks } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BarChart3, TrendingUp, AlertCircle, Target, Award, ListChecks, Calendar, Sparkles, ChevronRight } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
+import DailyReport from '@/components/DailyReport'
 import { useStore } from '@/lib/store'
 import { cn, formatTime } from '@/lib/utils'
+import { runAgentChecks, type AgentSuggestion } from '@/lib/solo-agent'
 import type { QuizSession } from '@/shared/types'
 
 interface ChapterStat {
@@ -17,10 +20,31 @@ interface ChapterStat {
 }
 
 export default function Analytics() {
-  const { subjects, currentSubjectId } = useStore()
+  const navigate = useNavigate()
+  const { subjects, currentSubjectId, selectSubject } = useStore()
   const [sessions, setSessions] = useState<QuizSession[]>([])
+  const [showReport, setShowReport] = useState(false)
+  const [agentSuggestions, setAgentSuggestions] = useState<AgentSuggestion[]>([])
 
   const subject = subjects.find((s) => s.id === currentSubjectId)
+
+  // SOLO Agent：进入分析页时检测学情，展示主动建议
+  useEffect(() => {
+    if (subjects.length === 0) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const suggestions = await runAgentChecks(subjects)
+        if (!cancelled) setAgentSuggestions(suggestions.slice(0, 3))
+      } catch {
+        // 忽略
+      }
+    }, 1500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [subjects])
 
   useEffect(() => {
     if (!currentSubjectId) return
@@ -131,6 +155,74 @@ export default function Analytics() {
       />
 
       <div className="px-8 py-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+        {/* SOLO Agent 主动建议 */}
+        {agentSuggestions.length > 0 && (
+          <div className="rounded-2xl glass border border-amber/15 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-amber" />
+              <h3 className="font-display text-base text-bone">SOLO Agent 建议</h3>
+              <span className="text-[10px] text-amber-dim tracking-wider uppercase ml-1">主动学情分析</span>
+              <button
+                onClick={() => setShowReport(true)}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber/12 hover:bg-amber/20 text-amber text-xs font-medium transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                查看今日日报
+              </button>
+            </div>
+            <div className="space-y-2">
+              {agentSuggestions.map((s) => (
+                <div
+                  key={s.id}
+                  className={cn(
+                    'flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-colors',
+                    s.priority === 'high'
+                      ? 'bg-rust/5 border-rust/20'
+                      : s.priority === 'medium'
+                      ? 'bg-amber/5 border-amber/15'
+                      : 'bg-sage/5 border-sage/15',
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-bone leading-snug">{s.title}</p>
+                    <p className="text-xs text-bone-dim mt-0.5 line-clamp-2">{s.message}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (s.subjectId) selectSubject(s.subjectId)
+                      if (s.actionPath) navigate(s.actionPath)
+                    }}
+                    className={cn(
+                      'shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors',
+                      s.priority === 'high'
+                        ? 'bg-rust/15 hover:bg-rust/25 text-rust'
+                        : s.priority === 'medium'
+                        ? 'bg-amber/15 hover:bg-amber/25 text-amber'
+                        : 'bg-sage/15 hover:bg-sage/25 text-sage-glow',
+                    )}
+                  >
+                    {s.actionLabel}
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 无 Agent 建议时显示日报入口 */}
+        {agentSuggestions.length === 0 && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowReport(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass border border-amber/12 hover:border-amber/25 text-amber text-xs font-medium transition-colors"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              查看今日日报
+            </button>
+          </div>
+        )}
+
         {/* 汇总指标卡片 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <SummaryCard icon={<ListChecks className="w-4 h-4" />} label="测验次数" value={`${summary.sessionCount}`} suffix="次" />
@@ -211,6 +303,7 @@ export default function Analytics() {
           )}
         </div>
       </div>
+      {showReport && <DailyReport onClose={() => setShowReport(false)} />}
     </div>
   )
 }

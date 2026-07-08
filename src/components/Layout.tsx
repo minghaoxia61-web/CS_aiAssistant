@@ -1,7 +1,8 @@
-// 全局布局：侧边栏 + 主内容区
+// 全局布局：侧边栏 + 主内容区 + SOLO Agent 主动推送
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import AgentToast from './AgentToast'
 import { useStore } from '@/lib/store'
 
 export default function Layout() {
@@ -20,6 +21,8 @@ export default function Layout() {
       <main className="flex-1 h-full overflow-hidden">
         <Outlet />
       </main>
+      {/* SOLO Agent 主动推送 Toast（全局挂载，启动后自动检测学情） */}
+      <AgentToast />
     </div>
   )
 }

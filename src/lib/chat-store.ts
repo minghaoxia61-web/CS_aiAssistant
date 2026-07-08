@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import { streamChat, buildChatSystemPrompt, estimateMaterialsTokens, summarizeMaterial } from '@/lib/llm'
 import { chunkMaterials, retrieveChunks, chunksToContext, type Chunk } from '@/lib/rag'
+import { ensureSubjectVectors, loadSubjectVectors, embedQuery } from '@/lib/vector'
 import type { ApiConfig, ChatSession, ChatMessage, Material, UserProfile } from '@/shared/types'
 
 /** 持久化索引文件结构（与 electron/store.ts SubjectIndexData 对应） */
@@ -59,6 +60,10 @@ async function getOrBuildChunks(subjectId: string, materials: Material[]): Promi
   } catch {
     // 保存失败不影响主流程
   }
+  // 后台构建向量索引（不阻塞问答，首次问答回退纯 BM25，构建完成后自动混合召回）
+  ensureSubjectVectors(subjectId, chunks).catch(() => {
+    // 静默失败：模型加载失败/无网络时降级为纯 BM25
+  })
   return chunks
 }
 
@@ -266,12 +271,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
         context = summaries.join('\n\n').trim()
       } else {
-        // 资料多但份数少（<5）：RAG 检索最相关片段
+        // 资料多但份数少（<5）：RAG 检索最相关片段（BM25 + 向量语义混合召回）
         // 使用持久化缓存：首次分块后落盘，重启/重复提问不重算
         const subjectChunks = await getOrBuildChunks(subjectId, readyMaterials)
         // 按用户选中的资料过滤分块（缓存含该科目全部 ready 资料）
         const selectedChunks = subjectChunks.filter((c) => selectedMatIds.has(c.materialId))
-        const retrieved = retrieveChunks(selectedChunks, text, RAG_BUDGET, subjectId, 8, 4)
+        // 向量语义检索：加载已构建的向量 + 查询向量化
+        // （向量在后台异步构建，未就绪时 chunkVectors 为空，回退纯 BM25）
+        const chunkVectors = await loadSubjectVectors(subjectId)
+        const queryVector = chunkVectors.size > 0 ? await embedQuery(text) : null
+        const retrieved = retrieveChunks(
+          selectedChunks,
+          text,
+          RAG_BUDGET,
+          subjectId,
+          8,
+          4,
+          chunkVectors.size > 0 ? chunkVectors : undefined,
+          queryVector || undefined,
+        )
         context = chunksToContext(retrieved)
       }
     }

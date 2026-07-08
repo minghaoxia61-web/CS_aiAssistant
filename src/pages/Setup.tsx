@@ -1,12 +1,13 @@
 // 设置页：多 API 配置管理 / 连接测试 / 生成参数
 // 列表为主，点击配置才展开编辑面板
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive, Database, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '@/lib/store'
 import { streamChat } from '@/lib/llm'
 import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
+import { getStorageStats, type StorageStats } from '@/lib/db'
 import type { ApiConfig, ApiConfigItem } from '@/shared/types'
 
 const PRESETS: { name: string; baseUrl: string; model: string }[] = [
@@ -48,10 +49,48 @@ export default function Setup() {
   // 缓存清理
   const [clearing, setClearing] = useState<string | null>(null)
   const [clearToast, setClearToast] = useState('')
+  // IndexedDB 存储统计
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
   useEffect(() => {
     loadConfigs()
+    refreshStats()
   }, [loadConfigs])
+
+  const refreshStats = async () => {
+    setStatsLoading(true)
+    try {
+      const stats = await getStorageStats()
+      setStorageStats(stats)
+    } catch {
+      // 非 IndexedDB 模式或获取失败，忽略
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  // 格式化字节数
+  const formatBytes = (bytes?: number) => {
+    if (bytes === undefined) return '未知'
+    if (bytes === 0) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`
+  }
+
+  // 表名中文映射
+  const tableLabels: Record<string, string> = {
+    subjects: '科目',
+    materials: '资料元数据',
+    chunks: '文本分块',
+    vectors: '向量索引',
+    chatSessions: '对话记录',
+    quizSessions: '测验记录',
+    wrongQuestions: '错题本',
+    reviewDocs: '复习文档',
+    cache: '通用缓存',
+  }
 
   const update = (patch: Partial<ApiConfig>) => setForm((f) => ({ ...f, ...patch }))
 
@@ -229,6 +268,7 @@ export default function Setup() {
       await window.api.clearCache([type])
       setClearToast(`${labels[type]}已清理`)
       setTimeout(() => setClearToast(''), 2500)
+      refreshStats()
     } catch {
       setClearToast('清理失败')
       setTimeout(() => setClearToast(''), 2500)
@@ -244,6 +284,7 @@ export default function Setup() {
       await window.api.clearParseCache()
       setClearToast('解析缓存已清理')
       setTimeout(() => setClearToast(''), 2500)
+      refreshStats()
     } finally {
       setClearing(null)
     }
@@ -346,17 +387,53 @@ export default function Setup() {
           )}
         </div>
 
-        {/* 缓存管理 */}
+        {/* 本地存储管理 */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <HardDrive className="w-4 h-4 text-bone-muted" />
-            <span className="label !mb-0">缓存管理</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-bone-muted" />
+              <span className="label !mb-0">本地存储管理</span>
+            </div>
+            <button
+              className="text-xs text-bone-muted hover:text-bone flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-ink-800/50 transition-colors"
+              onClick={refreshStats}
+              disabled={statsLoading}
+            >
+              {statsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              刷新
+            </button>
           </div>
           <div className="panel p-5">
             <p className="text-sm text-bone-muted mb-4">
-              应用采用分层存储：资料正文、检索索引、对话记录分别落地为独立文件，避免单文件膨胀。
-              下方可按需清理各类缓存释放磁盘空间。
+              数据存储在浏览器 IndexedDB，分表设计：科目、资料、分块、向量、对话、测验、错题、复习、缓存共 9 张表，建立外键索引。
+              所有解析、检索、向量特征均持久化，刷新页面无需重算。下方可按需清理释放空间。
             </p>
+
+            {/* 存储统计 */}
+            {storageStats && (
+              <div className="mb-4 p-3 rounded-xl bg-ink-800/30 border border-amber/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Database className="w-3.5 h-3.5 text-amber" />
+                  <span className="text-xs font-medium text-bone-dim">IndexedDB 存储统计</span>
+                  {storageStats.usage !== undefined && storageStats.quota !== undefined && (
+                    <span className="text-xs text-bone-faint ml-auto">
+                      {formatBytes(storageStats.usage)} / {formatBytes(storageStats.quota)}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {storageStats.tables.map((t) => (
+                    <div key={t.name} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-ink-900/40">
+                      <span className="text-xs text-bone-faint truncate">{tableLabels[t.name] || t.name}</span>
+                      <span className={cn('text-xs font-mono ml-2', t.count > 0 ? 'text-amber' : 'text-bone-faint')}>
+                        {t.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <button
                 className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-amber/15 hover:border-amber/30 hover:bg-amber/5 transition-colors text-left"
@@ -378,7 +455,7 @@ export default function Setup() {
                 <Trash2 className="w-4 h-4 text-amber shrink-0" />
                 <div className="min-w-0">
                   <div className="text-sm text-bone">检索索引缓存</div>
-                  <div className="text-xs text-bone-faint">BM25 分块索引，下次提问自动重建</div>
+                  <div className="text-xs text-bone-faint">分块 + 向量索引，下次提问自动重建</div>
                 </div>
                 {clearing === 'index' && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber ml-auto" />}
               </button>

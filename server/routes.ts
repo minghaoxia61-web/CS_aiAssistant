@@ -17,6 +17,7 @@ import {
 } from './config';
 import { parseBuffer, getFileType } from './parsers-server';
 import { streamChat, chatJSON } from '../electron/llm';
+import { CATALOG } from './knowledge/catalog';
 import type {
   ApiConfig,
   ApiConfigItem,
@@ -28,6 +29,22 @@ import type {
   UserProfile,
   LlmStreamOptions,
 } from '../src/shared/types';
+
+// 读取知识库文章内容（兼容开发/生产环境）
+function readKnowledgeArticle(slug: string): string {
+  const cwd = process.cwd();
+  const candidates = [
+    path.join(cwd, 'server', 'knowledge', `${slug}.md`),
+    path.join(cwd, 'dist-server', 'server', 'knowledge', `${slug}.md`),
+  ];
+  const filePath = candidates.find((p) => fs.existsSync(p));
+  try {
+    if (filePath) return fs.readFileSync(filePath, 'utf-8');
+    return `# 文章加载失败\n\n无法找到文章内容：${slug}`;
+  } catch {
+    return `# 文章加载失败\n\n无法找到文章内容：${slug}`;
+  }
+}
 
 const now = () => Date.now();
 
@@ -185,6 +202,56 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
   app.delete('/api/materials/:id', (req: Request, res: Response) => {
     store.deleteMaterial(req.params.id);
     res.json({ ok: true });
+  });
+
+  // ---------- 纯解析端点（IndexedDB 模式：服务端不存储用户数据） ----------
+  // 接收文件，返回解析后的文本与文件类型，不在服务端落地任何 Material 记录
+  // 前端把返回结果直接写入 IndexedDB
+  app.post(
+    '/api/parse',
+    upload.array('files[]'),
+    async (req: Request, res: Response) => {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        res.json([]);
+        return;
+      }
+      const apiConfig = getConfig();
+      const results: { filename: string; filetype: string; size: number; text: string; error?: string }[] = [];
+      for (const f of files) {
+        try {
+          const r = await parseBuffer(f.buffer, f.originalname, apiConfig);
+          results.push({
+            filename: f.originalname,
+            filetype: r.filetype || getFileType(f.originalname),
+            size: f.size,
+            text: r.text,
+          });
+        } catch (err) {
+          results.push({
+            filename: f.originalname,
+            filetype: getFileType(f.originalname),
+            size: f.size,
+            text: '',
+            error: (err as Error).message,
+          });
+        }
+      }
+      res.json(results);
+    },
+  );
+
+  // ---------- 知识库文章（供 IndexedDB 模式前端种子注入） ----------
+  app.get('/api/knowledge', (_req: Request, res: Response) => {
+    const articles = CATALOG.map((a) => ({
+      slug: a.slug,
+      category: a.category,
+      categoryName: a.categoryName,
+      title: a.title,
+      order: a.order,
+      content: readKnowledgeArticle(a.slug),
+    }));
+    res.json(articles);
   });
 
   // ---------- 对话 ----------

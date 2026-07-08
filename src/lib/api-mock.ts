@@ -3,6 +3,7 @@
 import type { ElectronAPI } from '@/global.d'
 import type { ApiConfig, ApiConfigItem, Subject, Material, ChatSession, ReviewDoc, QuizSession, LlmStreamOptions, LlmTokenEvent, LlmDoneEvent, LlmErrorEvent, UserProfile, TaskProgress } from '@/shared/types'
 import { createHttpApi } from './api-http'
+import { createDbApi, isIndexedDBAvailable } from './db-adapter'
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
@@ -14,6 +15,49 @@ const DEFAULT_CONFIG: ApiConfig = {
 }
 
 const LS_KEY = 'cs-ai-tutor-preview'
+
+// ---------- 延迟代理：在 createDbApi() 异步初始化完成前排队的调用 ----------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let realApi: ElectronAPI | null = null
+const pendingCalls: Array<() => void> = []
+
+function makeLazyApi(): ElectronAPI {
+  // 用 Proxy 拦截所有方法调用，realApi 就绪前排队，就绪后直接转发
+  return new Proxy({} as ElectronAPI, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    get(_target, prop: string) {
+      if (realApi) return (realApi as any)[prop]
+      // on* 方法返回同步退订函数，需特殊处理
+      if (prop.startsWith('on')) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (cb: any) => {
+          let realUnsub: (() => void) | null = null
+          pendingCalls.push(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            realUnsub = (realApi as any)[prop](cb)
+          })
+          return () => {
+            if (realUnsub) realUnsub()
+          }
+        }
+      }
+      // 其余方法返回 Promise，等 realApi 就绪后执行
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (...args: any[]) => {
+        return new Promise((resolve, reject) => {
+          pendingCalls.push(() => {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              Promise.resolve((realApi as any)[prop](...args)).then(resolve, reject)
+            } catch (e) {
+              reject(e)
+            }
+          })
+        })
+      }
+    },
+  })
+}
 
 function loadState(): {
   subjects: Subject[]
@@ -44,9 +88,31 @@ function saveState(s: ReturnType<typeof loadState>) {
 export function installMockIfNeeded() {
   if (typeof window !== 'undefined' && (window as { api?: ElectronAPI }).api) return
 
-  // Web 部署模式：安装 HTTP 适配器（连接真实后端）
+  // Web 部署模式：优先安装 IndexedDB 适配器（数据存浏览器，服务端仅做解析+LLM 代理）
   // 注意：Vite define 用 JSON.stringify 注入的是布尔值 true，不是字符串 'true'
   if (import.meta.env.VITE_WEB_MODE === true || import.meta.env.VITE_WEB_MODE === 'true') {
+    if (isIndexedDBAvailable()) {
+      // 先安装延迟代理，createDbApi() 完成后切换到真实适配器
+      const lazy = makeLazyApi()
+      ;(window as { api?: ElectronAPI }).api = lazy
+      createDbApi()
+        .then((api) => {
+          realApi = api
+          // 执行所有排队的调用
+          const calls = pendingCalls.splice(0)
+          for (const call of calls) call()
+        })
+        .catch((err) => {
+          // IndexedDB 初始化失败：降级到 HTTP 适配器
+          console.error('IndexedDB 初始化失败，降级到 HTTP 适配器:', err)
+          const http = createHttpApi()
+          realApi = http
+          const calls = pendingCalls.splice(0)
+          for (const call of calls) call()
+        })
+      return
+    }
+    // IndexedDB 不可用：直接用 HTTP 适配器
     ;(window as { api?: ElectronAPI }).api = createHttpApi()
     return
   }

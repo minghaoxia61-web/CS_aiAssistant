@@ -3,6 +3,7 @@
 // 无论选中多少份资料，对话始终快速
 import type { Material } from '@/shared/types'
 import { estimateTokens } from './llm'
+import { cosineSimilarity, VECTOR_WEIGHT, BM25_IN_HYBRID } from './vector'
 
 export interface Chunk {
   materialId: string
@@ -207,6 +208,8 @@ interface ScoredChunk {
  * @param subjectId 可选，按科目隔离检索
  * @param topK 检索结果硬上限（默认 8）
  * @param minK 检索结果下限（默认 4）
+ * @param chunkVectors 可选，chunkId -> 向量（有则启用向量语义召回）
+ * @param queryVector 可选，查询向量（与 chunkVectors 同时存在时走混合检索）
  */
 export function retrieveChunks(
   chunks: Chunk[],
@@ -215,6 +218,8 @@ export function retrieveChunks(
   subjectId?: string,
   topK: number = TOPK_DEFAULT,
   minK: number = TOPK_MIN,
+  chunkVectors?: Map<string, Float32Array>,
+  queryVector?: Float32Array,
 ): Chunk[] {
   // 按科目隔离
   let candidates = chunks
@@ -264,21 +269,32 @@ export function retrieveChunks(
   const N = prepared.length
   const avgdl = prepared.reduce((sum, p) => sum + p.len, 0) / (N || 1)
 
-  // 计算 BM25 + n-gram 原始分数
+  // 是否启用向量语义召回
+  const useVectors = !!(chunkVectors && chunkVectors.size > 0 && queryVector)
+
+  // 计算 BM25 + n-gram（+ 向量）原始分数
   const rawScored = prepared.map((p) => {
     const bm25 = bm25Score(queryTF, p.tf, p.len, avgdl, df, N)
     const ngram = ngramSimilarity(queryBigrams, p.bigramSet)
-    return { chunk: p.chunk, bm25, ngram }
+    let vec = 0
+    if (useVectors) {
+      const v = chunkVectors!.get(`${p.chunk.materialId}:${p.chunk.index}`)
+      if (v) vec = cosineSimilarity(queryVector!, v)
+    }
+    return { chunk: p.chunk, bm25, ngram, vec }
   })
 
   // 归一化到 [0, 1]（除以最大值），便于加权融合
   const maxBm25 = Math.max(...rawScored.map((s) => s.bm25), 1e-9)
   const maxNgram = Math.max(...rawScored.map((s) => s.ngram), 1e-9)
+  const maxVec = Math.max(...rawScored.map((s) => s.vec), 1e-9)
 
-  // 最终分数 = 0.7 * BM25 + 0.3 * n-gram
+  // 混合召回：有向量 → 0.4*BM25 + 0.6*向量；无向量 → 0.7*BM25 + 0.3*n-gram（降级）
   const scored: ScoredChunk[] = rawScored.map((s) => ({
     chunk: s.chunk,
-    score: BM25_WEIGHT * (s.bm25 / maxBm25) + NGRAM_WEIGHT * (s.ngram / maxNgram),
+    score: useVectors
+      ? BM25_IN_HYBRID * (s.bm25 / maxBm25) + VECTOR_WEIGHT * (s.vec / maxVec)
+      : BM25_WEIGHT * (s.bm25 / maxBm25) + NGRAM_WEIGHT * (s.ngram / maxNgram),
   }))
 
   // 按分数降序
