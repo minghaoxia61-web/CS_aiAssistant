@@ -1,15 +1,15 @@
 // Web 版 API 配置存储（服务端）
 // 替代 electron/config.ts，去掉 electron-store 和机器绑定加密
-// 配置存到 ./data/config.json，评委默认使用内置 DeepSeek-V4-Flash 免费密钥
+// 配置存到 ./data/config.json，API Key 从环境变量读取，不硬编码到源码
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { ApiConfig, ApiConfigItem } from '../src/shared/types';
 
 const DEFAULT_CONFIG: ApiConfig = {
-  baseUrl: 'https://api.deepseek.com',
-  apiKey: 'sk-5ba42809b55a48558c7df08c2c5da213',
-  model: 'deepseek-v4-flash',
+  baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
+  apiKey: process.env.LLM_API_KEY || '',
+  model: process.env.LLM_MODEL || 'deepseek-v4-flash',
   temperature: 0.7,
   maxTokens: 0,
   topP: 1,
