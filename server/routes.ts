@@ -382,7 +382,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
     // 服务端配置优先：apiKey 始终从环境变量/服务端读取，前端不可覆盖
     const serverConfig = getConfig();
-    const clientConfig = opts.config || {};
+    const clientConfig: ApiConfig = opts.config || { ...serverConfig };
     const config = {
       ...serverConfig,
       ...clientConfig,
