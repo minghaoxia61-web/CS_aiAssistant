@@ -1,14 +1,18 @@
 // Web 版 API 配置存储（服务端）
 // 替代 electron/config.ts，去掉 electron-store 和机器绑定加密
-// 配置存到 ./data/config.json，API Key 从环境变量读取，不硬编码到源码
+// 配置存到 ./data/config.json
+// API Key 优先从环境变量读取，无环境变量时使用内置默认 key（大赛演示用）
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { ApiConfig, ApiConfigItem } from '../src/shared/types';
 
+// 内置默认 API Key（大赛演示用，生产环境请用 LLM_API_KEY 环境变量覆盖）
+const BUILTIN_API_KEY = 'sk-5ba42809b55a48558c7df08c2c5da213';
+
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
-  apiKey: process.env.LLM_API_KEY || '',
+  apiKey: process.env.LLM_API_KEY || BUILTIN_API_KEY,
   model: process.env.LLM_MODEL || 'deepseek-v4-flash',
   temperature: 0.7,
   maxTokens: 0,
@@ -68,7 +72,17 @@ export function getConfig(): ApiConfig {
   if (!active) return { ...DEFAULT_CONFIG };
   const { id, name, createdAt, ...rest } = active;
   void id; void name; void createdAt;
-  return { ...DEFAULT_CONFIG, ...rest };
+  // 旧配置纠偏：如果 baseUrl 不是 deepseek.com，说明是旧的 GLM 配置，回退到默认
+  if (!rest.baseUrl || !rest.baseUrl.includes('deepseek.com')) {
+    return { ...DEFAULT_CONFIG };
+  }
+  // 强制使用正确的 model 和 apiKey，防止 config.json 缓存了旧值
+  return {
+    ...DEFAULT_CONFIG,
+    ...rest,
+    model: 'deepseek-v4-flash',
+    apiKey: DEFAULT_CONFIG.apiKey,
+  };
 }
 
 export function listConfigs(): ApiConfigItem[] {
