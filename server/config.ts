@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { ApiConfig, ApiConfigItem } from '../src/shared/types';
 
 // 内置默认 API Key（大赛演示用，生产环境请用 LLM_API_KEY 环境变量覆盖）
-const BUILTIN_API_KEY = 'sk-5ba42809b55a48558c7df08c2c5da213';
+const BUILTIN_API_KEY = 'sk-b88d255ffc094a7898ab9c48c078bb0d';
 
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
