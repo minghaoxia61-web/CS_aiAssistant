@@ -80,7 +80,22 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
   // ---------- 配置 ----------
   app.get('/api/config', (_req: Request, res: Response) => {
-    res.json(getConfig());
+    // 不返回 apiKey 给前端（安全），前端不需要直接调用 LLM API
+    const cfg = getConfig();
+    res.json({ ...cfg, apiKey: '' });
+  });
+
+  // 调试端点：返回服务端实际使用的配置（apiKey 脱敏），用于排查 401
+  app.get('/api/config/debug', (_req: Request, res: Response) => {
+    const cfg = getConfig();
+    const key = cfg.apiKey || '';
+    res.json({
+      baseUrl: cfg.baseUrl,
+      model: cfg.model,
+      apiKeySuffix: key ? `****${key.slice(-4)}` : '(空)',
+      apiKeySource: process.env.LLM_API_KEY ? 'env:LLM_API_KEY' : 'config.json',
+      hasKey: !!key,
+    });
   });
 
   app.put('/api/config', (req: Request, res: Response) => {

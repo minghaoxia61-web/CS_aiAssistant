@@ -50,18 +50,25 @@ function setStore(val: ConfigStore): void {
 }
 
 export function getConfig(): ApiConfig {
+  // 环境变量模式：如果设置了 LLM_API_KEY，完全使用环境变量配置，忽略 config.json
+  if (process.env.LLM_API_KEY) {
+    return {
+      baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
+      apiKey: process.env.LLM_API_KEY,
+      model: process.env.LLM_MODEL || 'deepseek-v4-flash',
+      temperature: 0.7,
+      maxTokens: 0,
+      topP: 1,
+    };
+  }
+  // 无环境变量：从 config.json 读取
   const { configs, activeId } = getStore();
   if (!activeId || configs.length === 0) return { ...DEFAULT_CONFIG };
   const active = configs.find((c) => c.id === activeId);
   if (!active) return { ...DEFAULT_CONFIG };
   const { id, name, createdAt, ...rest } = active;
   void id; void name; void createdAt;
-  // 环境变量的 apiKey 始终优先（安全：防止 data/config.json 缓存旧 key）
-  return {
-    ...DEFAULT_CONFIG,
-    ...rest,
-    apiKey: process.env.LLM_API_KEY || rest.apiKey || DEFAULT_CONFIG.apiKey,
-  };
+  return { ...DEFAULT_CONFIG, ...rest };
 }
 
 export function listConfigs(): ApiConfigItem[] {

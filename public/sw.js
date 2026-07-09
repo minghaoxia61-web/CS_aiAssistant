@@ -1,7 +1,7 @@
 // Service Worker — PWA 离线支持
 // 策略：app shell 预缓存 + 静态资源 stale-while-revalidate + API network-first + CDN cache-first
 // 首次加载后断网仍可访问所有已缓存页面，向量模型/WASM 也被缓存供离线推理
-const CACHE_VERSION = 'cs-v1'
+const CACHE_VERSION = 'cs-v2'
 const SHELL_CACHE = `shell-${CACHE_VERSION}`
 const ASSET_CACHE = `assets-${CACHE_VERSION}`
 const CDN_CACHE = `cdn-${CACHE_VERSION}`
@@ -71,6 +71,22 @@ self.addEventListener('fetch', (event) => {
           return res
         })
       }),
+    )
+    return
+  }
+
+  // HTML 文档：network-first（确保总是加载最新版本，避免白屏）
+  if (isSameOrigin && (req.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/')) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const clone = res.clone()
+            caches.open(SHELL_CACHE).then((c) => c.put(req, clone))
+          }
+          return res
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html'))),
     )
     return
   }
