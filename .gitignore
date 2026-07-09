@@ -24,6 +24,7 @@ release/
 
 # 本地数据
 .trae/
+数据结构/
 
 # Editor directories and files
 .vscode/*

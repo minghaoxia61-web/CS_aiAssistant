@@ -1,13 +1,14 @@
 // 设置页：多 API 配置管理 / 连接测试 / 生成参数
 // 列表为主，点击配置才展开编辑面板
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive, Database, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive, Database, RefreshCw, Sparkles, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '@/lib/store'
 import { streamChat } from '@/lib/llm'
 import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
 import { getStorageStats, type StorageStats } from '@/lib/db'
+import { loadDemoData, isDemoLoaded, type DemoProgress } from '@/lib/demo-data'
 import type { ApiConfig, ApiConfigItem } from '@/shared/types'
 
 const PRESETS: { name: string; baseUrl: string; model: string }[] = [
@@ -31,7 +32,7 @@ const EMPTY_FORM: ApiConfig = {
 
 export default function Setup() {
   const navigate = useNavigate()
-  const { config, configs, loadConfigs, saveConfigItem, deleteConfigItem, switchConfig } = useStore()
+  const { config, configs, loadConfigs, saveConfigItem, deleteConfigItem, switchConfig, loadSubjects } = useStore()
 
   const [showEditor, setShowEditor] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -52,6 +53,30 @@ export default function Setup() {
   // IndexedDB 存储统计
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+
+  // 演示数据加载
+  const [demoLoading, setDemoLoading] = useState(false)
+  const [demoProgress, setDemoProgress] = useState<DemoProgress | null>(null)
+  const [demoLoaded, setDemoLoaded] = useState(false)
+
+  useEffect(() => {
+    isDemoLoaded().then(setDemoLoaded)
+  }, [])
+
+  const handleLoadDemo = async () => {
+    setDemoLoading(true)
+    setDemoProgress(null)
+    try {
+      await loadDemoData((p) => setDemoProgress(p))
+      setDemoLoaded(true)
+      refreshStats()
+      loadSubjects()
+    } catch (e) {
+      console.error('Demo load failed:', e)
+    } finally {
+      setDemoLoading(false)
+    }
+  }
 
   useEffect(() => {
     loadConfigs()
@@ -385,6 +410,56 @@ export default function Setup() {
               })}
             </div>
           )}
+        </div>
+
+        {/* 演示数据 */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-amber" />
+            <span className="label !mb-0">演示数据</span>
+          </div>
+          <div className="panel p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-bone mb-1">一键加载"数据结构"示例科目</p>
+                <p className="text-xs text-bone-muted leading-relaxed">
+                  预置 4 份真实 PDF 课件（绪论、栈与队列、树、动态规划）+ 1 次测验（含 3 道错题）+ 1 条对话记录 + 1 份复习摘要。
+                  加载后可直接体验 AI 问答、RAG 检索、SOLO Agent 主动推送等全部功能。
+                </p>
+              </div>
+              {demoLoaded && !demoLoading ? (
+                <span className="shrink-0 text-xs text-sage-glow flex items-center gap-1 px-3 py-2 rounded-lg bg-sage/10 border border-sage/20">
+                  <Check className="w-3.5 h-3.5" /> 已加载
+                </span>
+              ) : (
+                <button
+                  className="shrink-0 btn-primary !py-2 text-xs flex items-center gap-1.5"
+                  onClick={handleLoadDemo}
+                  disabled={demoLoading}
+                >
+                  {demoLoading ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加载中…</>
+                  ) : (
+                    <><Download className="w-3.5 h-3.5" /> 加载示例数据</>
+                  )}
+                </button>
+              )}
+            </div>
+            {demoProgress && demoLoading && (
+              <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                <div className="flex items-center justify-between text-xs text-bone-muted mb-2">
+                  <span>{demoProgress.message}</span>
+                  <span>{demoProgress.current}/{demoProgress.total}</span>
+                </div>
+                <div className="h-1.5 bg-ink-800/50 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[var(--accent)] to-amber rounded-full transition-all duration-300"
+                    style={{ width: `${demoProgress.total > 0 ? (demoProgress.current / demoProgress.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 本地存储管理 */}
