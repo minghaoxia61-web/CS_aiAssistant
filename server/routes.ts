@@ -380,14 +380,14 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     const opts = req.body as LlmStreamOptions & { requestId?: string };
     const requestId = opts.requestId || uuidv4();
 
-    // 使用服务端配置作为后备（防止前端传来的 config 缺少 apiKey）
+    // 服务端配置优先：apiKey 始终从环境变量/服务端读取，前端不可覆盖
     const serverConfig = getConfig();
-    const clientConfig = opts.config || serverConfig;
+    const clientConfig = opts.config || {};
     const config = {
       ...serverConfig,
       ...clientConfig,
-      // 如果前端没传 apiKey，用服务端的
-      apiKey: clientConfig.apiKey || serverConfig.apiKey,
+      // apiKey 始终用服务端的，前端传来的忽略（安全）
+      apiKey: serverConfig.apiKey,
       baseUrl: clientConfig.baseUrl || serverConfig.baseUrl,
       model: clientConfig.model || serverConfig.model,
     };
@@ -518,7 +518,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     const config = {
       ...serverConfig,
       ...(opts.config || {}),
-      apiKey: opts.config?.apiKey || serverConfig.apiKey,
+      apiKey: serverConfig.apiKey,
       baseUrl: opts.config?.baseUrl || serverConfig.baseUrl,
       model: opts.config?.model || serverConfig.model,
     };

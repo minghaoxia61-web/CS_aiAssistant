@@ -56,7 +56,12 @@ export function getConfig(): ApiConfig {
   if (!active) return { ...DEFAULT_CONFIG };
   const { id, name, createdAt, ...rest } = active;
   void id; void name; void createdAt;
-  return { ...DEFAULT_CONFIG, ...rest };
+  // 环境变量的 apiKey 始终优先（安全：防止 data/config.json 缓存旧 key）
+  return {
+    ...DEFAULT_CONFIG,
+    ...rest,
+    apiKey: process.env.LLM_API_KEY || rest.apiKey || DEFAULT_CONFIG.apiKey,
+  };
 }
 
 export function listConfigs(): ApiConfigItem[] {
