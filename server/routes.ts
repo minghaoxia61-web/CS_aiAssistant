@@ -545,7 +545,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
         messages: [{ role: 'user', content: '说"连接正常"' }],
         stream: false,
       });
-      res.json({ ok: true, message: 'GLM API 连接正常', response: content, config: { baseUrl: config.baseUrl, model: config.model, hasKey: !!config.apiKey } });
+      res.json({ ok: true, message: 'API 连接正常', response: content, config: { baseUrl: config.baseUrl, model: config.model, hasKey: !!config.apiKey } });
     } catch (e) {
       res.json({ ok: false, error: (e as Error).message, config: { baseUrl: getConfig().baseUrl, model: getConfig().model, hasKey: !!getConfig().apiKey } });
     }

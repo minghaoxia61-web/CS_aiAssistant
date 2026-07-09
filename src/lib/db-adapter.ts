@@ -63,9 +63,9 @@ const CONFIG_LIST_KEY = 'config:list'
 
 // ---------- 默认配置 ----------
 const DEFAULT_CONFIG: ApiConfig = {
-  baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+  baseUrl: 'https://api.deepseek.com',
   apiKey: '',
-  model: 'glm-4-flash-250414',
+  model: 'deepseek-v4-flash',
   temperature: 0.7,
   maxTokens: 0,
   topP: 1,
