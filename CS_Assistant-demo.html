@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS_Assistant — 智能复习助手 | Trae AI 大赛作品</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0b0d;
+    --bg-card: #14161a;
+    --bg-hover: #1a1d23;
+    --border: #2a2d35;
+    --text: #e8e6e3;
+    --text-muted: #8b8d93;
+    --text-faint: #5a5d65;
+    --accent: #32f08c;
+    --accent-dim: #32f08c33;
+    --blue: #3b82f6;
+    --blue-dim: #3b82f633;
+    --purple: #a78bfa;
+    --purple-dim: #a78bfa33;
+    --orange: #fb923c;
+    --red: #f87171;
+    --yellow: #fbbf24;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* 背景渐变光晕 */
+  .bg-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bg-blob-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; right: -100px; animation: float1 20s ease-in-out infinite; }
+  .bg-blob-2 { width: 400px; height: 400px; background: var(--blue); bottom: 10%; left: -100px; animation: float2 25s ease-in-out infinite; }
+  .bg-blob-3 { width: 350px; height: 350px; background: var(--purple); top: 40%; right: 20%; animation: float3 30s ease-in-out infinite; }
+
+  @keyframes float1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-50px,30px); } }
+  @keyframes float2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px,-40px); } }
+  @keyframes float3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-30px,-60px); } }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 100px;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 28px;
+    font-weight: 600;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 68px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 0%, #32f08c 50%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--text-muted);
+    max-width: 680px;
+    margin: 0 auto 40px;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-meta-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .hero-meta-label {
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+  .hero-cta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0b0d;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-dim); }
+  .btn-ghost {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Section */
+  section { padding: 80px 0; }
+  .section-title {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+  .section-sub {
+    color: var(--text-muted);
+    font-size: 17px;
+    margin-bottom: 48px;
+    max-width: 600px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-card);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    margin-bottom: 32px;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border: none;
+    background: transparent;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #0a0b0d;
+  }
+  .tab:not(.active):hover { color: var(--text); background: var(--bg-hover); }
+
+  .tab-panel { display: none; animation: fadeIn 0.4s ease; }
+  .tab-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .feature-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  .feature-icon.green { background: var(--accent-dim); color: var(--accent); }
+  .feature-icon.blue { background: var(--blue-dim); color: var(--blue); }
+  .feature-icon.purple { background: var(--purple-dim); color: var(--purple); }
+  .feature-icon.orange { background: #fb923c33; color: var(--orange); }
+
+  .feature-card h3 { font-size: 22px; margin-bottom: 12px; }
+  .feature-card p { color: var(--text-muted); margin-bottom: 16px; line-height: 1.7; }
+
+  .code-block {
+    background: #0d0e10;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 16px 0;
+    line-height: 1.6;
+  }
+  .code-block .kw { color: #ff79c6; }
+  .code-block .fn { color: #50fa7b; }
+  .code-block .str { color: #f1fa8c; }
+  .code-block .num { color: #bd93f9; }
+  .code-block .com { color: #6272a4; }
+  .code-block .var { color: #8be9fd; }
+
+  /* Agent Demo */
+  .agent-demo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .agent-trigger-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .agent-trigger {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .agent-trigger:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .agent-trigger-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .agent-trigger-name {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .agent-trigger-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 400px;
+  }
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    animation: slideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    backdrop-filter: blur(12px);
+  }
+  .toast.high { border-left: 4px solid var(--red); }
+  .toast.medium { border-left: 4px solid var(--yellow); }
+  .toast.low { border-left: 4px solid var(--blue); }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .toast.removing { animation: slideOut 0.3s ease forwards; }
+  @keyframes slideOut { to { transform: translateX(120%); opacity: 0; } }
+
+  .toast-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .toast-icon { font-size: 20px; }
+  .toast-title { font-weight: 700; font-size: 15px; }
+  .toast-priority {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 700;
+  }
+  .toast-priority.high { background: #f8717133; color: var(--red); }
+  .toast-priority.medium { background: #fbbf2433; color: var(--yellow); }
+  .toast-priority.low { background: #3b82f633; color: var(--blue); }
+  .toast-msg { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 14px; }
+  .toast-actions { display: flex; gap: 8px; }
+  .toast-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toast-btn-primary { background: var(--accent); color: #0a0b0d; }
+  .toast-btn-primary:hover { opacity: 0.85; }
+  .toast-btn-ghost { background: var(--bg-hover); color: var(--text-muted); }
+  .toast-btn-ghost:hover { color: var(--text); }
+
+  /* RAG Demo */
+  .rag-demo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .chat-window {
+    background: #0d0e10;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .chat-msg {
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    max-width: 85%;
+  }
+  .chat-msg.user {
+    background: var(--blue-dim);
+    border: 1px solid var(--blue);
+    margin-left: auto;
+  }
+  .chat-msg.ai {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+  .chat-msg .role {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+  .chat-msg .content {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .retrieval-panel {
+    background: #0d0e10;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .retrieval-title {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .retrieval-chunk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .retrieval-rank {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .retrieval-text {
+    flex: 1;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .retrieval-scores {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .score-bm { color: var(--orange); }
+  .score-vec { color: var(--purple); }
+  .score-total { color: var(--accent); font-weight: 700; }
+
+  /* Worker Demo */
+  .worker-demo {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .worker-task {
+    margin-bottom: 20px;
+  }
+  .worker-task-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .worker-task-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .worker-task-status {
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+  .worker-task-status.done { color: var(--accent); }
+  .worker-task-status.running { color: var(--yellow); }
+  .progress-bar {
+    height: 8px;
+    background: var(--bg-hover);
+    border-radius: 100px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s ease;
+    background: linear-gradient(90deg, var(--blue), var(--accent));
+  }
+  .progress-fill.done {
+    background: var(--accent);
+  }
+
+  /* Architecture */
+  .arch-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    overflow-x: auto;
+  }
+  .arch-layer {
+    margin-bottom: 24px;
+  }
+  .arch-layer-title {
+    font-size: 13px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  .arch-boxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .arch-box {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 120px;
+  }
+  .arch-box.green { border-color: var(--accent); color: var(--accent); }
+  .arch-box.blue { border-color: var(--blue); color: var(--blue); }
+  .arch-box.purple { border-color: var(--purple); color: var(--purple); }
+  .arch-box.orange { border-color: var(--orange); color: var(--orange); }
+  .arch-arrow {
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 20px;
+    margin: 4px 0;
+  }
+
+  /* Tech Stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .tech-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+  }
+  .tech-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .tech-item h4 {
+    font-size: 14px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .tech-item p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Guide */
+  .guide-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  .guide-step {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+  }
+  .guide-step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0a0b0d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .guide-step h4 { font-size: 16px; margin-bottom: 8px; }
+  .guide-step p { font-size: 13px; color: var(--text-muted); }
+
+  /* Links */
+  .links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .link-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: block;
+  }
+  .link-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .link-card h4 { font-size: 16px; margin-bottom: 6px; color: var(--accent); }
+  .link-card p { font-size: 13px; color: var(--text-muted); word-break: break-all; }
+  .link-card .url { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
+
+  footer {
+    padding: 60px 24px 40px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+  }
+  footer p { color: var(--text-faint); font-size: 14px; }
+
+  @media (max-width: 768px) {
+    .hero-meta { gap: 20px; }
+    .hero-meta-num { font-size: 26px; }
+    .section-title { font-size: 28px; }
+    .arch-boxes { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-blob bg-blob-1"></div>
+<div class="bg-blob bg-blob-2"></div>
+<div class="bg-blob bg-blob-3"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">Trae AI 大赛参赛作品 · 学习工作赛道</div>
+  <h1>CS_Assistant<br>智能复习助手</h1>
+  <p class="hero-sub">
+    基于 RAG 混合召回 + SOLO Agent 主动智能的全栈 AI 辅教系统。<br>
+    上传课件 → 智能问答 → 自动测验 → 错题分析 → 主动推送薄弱章节。
+  </p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">
+      <div class="hero-meta-num" data-target="9">0</div>
+      <div class="hero-meta-label">功能页面</div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="hero-meta-num" data-target="384">0</div>
+      <div class="hero-meta-label">向量维度</div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="hero-meta-num" data-target="5">0</div>
+      <div class="hero-meta-label">Agent 触发器</div>
+    </div>
+    <div class="hero-meta-item">
+      <div class="hero-meta-num" data-target="270">0</div>
+      <div class="hero-meta-label">首屏 KB</div>
+    </div>
+  </div>
+  <div class="hero-cta">
+    <a href="https://csaiassistant-production.up.railway.app/" target="_blank" class="btn btn-primary">
+      在线体验 →
+    </a>
+    <a href="#features" class="btn btn-ghost">了解功能</a>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <h2 class="section-title">核心技术创新</h2>
+    <p class="section-sub">5 大技术亮点，从存储到检索到主动智能，全程用 Trae 开发完成。</p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="vector">向量语义检索</button>
+      <button class="tab" data-tab="indexeddb">IndexedDB 存储</button>
+      <button class="tab" data-tab="worker">Web Worker</button>
+      <button class="tab" data-tab="solo">SOLO Agent</button>
+      <button class="tab" data-tab="pwa">PWA 离线</button>
+    </div>
+
+    <!-- Tab 1: 向量检索 -->
+    <div class="tab-panel active" data-panel="vector">
+      <div class="feature-card">
+        <div class="feature-icon green">⚡</div>
+        <h3>BM25 + 向量语义混合召回</h3>
+        <p>
+          传统关键词检索无法理解语义——搜索"树的遍历"匹配不到"前序遍历"。
+          本项目加载 transformers.js 的 all-MiniLM-L6-v2 模型（384 维），
+          在浏览器端计算向量相似度，与自实现 BM25 混合：
+          <strong style="color:var(--accent)">BM25 × 0.4 + 向量 × 0.6</strong>。
+          向量持久化到 IndexedDB，上传一次课件永久复用，无需重复计算。
+        </p>
+        <div class="code-block">
+<span class="com">// 混合召回核心逻辑（src/lib/rag.ts）</span>
+<span class="kw">const</span> <span class="var">hybridScore</span> = <span class="var">bm25Score</span> * <span class="num">0.4</span> + <span class="var">vectorScore</span> * <span class="num">0.6</span>;
+<span class="com">// 有向量时走混合召回，无向量时降级纯 BM25</span>
+<span class="kw">const</span> <span class="var">finalScore</span> = <span class="var">vectors</span>.<span class="fn">length</span> > <span class="num">0</span> ? <span class="var">hybridScore</span> : <span class="var">bm25Score</span>;
+<span class="kw">return</span> <span class="var">chunks</span>.<span class="fn">sort</span>((<span class="var">a</span>, <span class="var">b</span>) => <span class="var">b</span>.<span class="var">score</span> - <span class="var">a</span>.<span class="var">score</span>).<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">8</span>); <span class="com">// Top8 硬限制</span>
+        </div>
+      </div>
+
+      <!-- 交互式 RAG 检索演示 -->
+      <div class="rag-demo">
+        <h3 style="margin-bottom:20px;">交互式演示：混合召回</h3>
+        <p style="color:var(--text-muted);margin-bottom:20px;font-size:14px;">
+          输入问题，查看 BM25 + 向量如何各自评分并融合（点击下方问题快速体验）。
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <button class="btn btn-ghost quick-q" data-q="什么是栈？和队列有什么区别？" style="font-size:13px;padding:8px 14px;">什么是栈？</button>
+          <button class="btn btn-ghost quick-q" data-q="二叉树的遍历方式有哪些？" style="font-size:13px;padding:8px 14px;">二叉树遍历</button>
+          <button class="btn btn-ghost quick-q" data-q="动态规划的基本思想是什么？" style="font-size:13px;padding:8px 14px;">动态规划</button>
+        </div>
+        <div class="chat-window" id="rag-chat">
+          <div class="chat-msg ai">
+            <div class="role">CS_Assistant</div>
+            <div class="content" style="color:var(--text-muted);font-size:13px;">选择上方问题或输入你的问题，查看 RAG 检索过程...</div>
+          </div>
+        </div>
+        <div class="retrieval-panel" id="retrieval-panel" style="display:none;">
+          <div class="retrieval-title">
+            <span>📊</span> 检索详情 — Top 6 分块命中
+          </div>
+          <div id="retrieval-chunks"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: IndexedDB -->
+    <div class="tab-panel" data-panel="indexeddb">
+      <div class="feature-card">
+        <div class="feature-icon blue">💾</div>
+        <h3>IndexedDB 分表设计（9 张表 + 外键索引）</h3>
+        <p>
+          数据完全存浏览器本地，后端变为纯 LLM 代理。用户隔离，刷新页面不丢失数据。
+          支持级联删除（删科目 → 自动删该科目的所有资料/分块/向量/对话/错题）。
+          缓存 TTL 自动过期，提供一键清理面板。
+        </p>
+        <div class="code-block">
+<span class="com">// 9 张分表 + 外键索引（src/lib/db.ts）</span>
+<span class="var">subjects</span>     <span class="com">// id</span>
+<span class="var">materials</span>    <span class="com">// id, subject_id, status</span>
+<span class="var">chunks</span>       <span class="com">// id, subject_id, material_id, [subject_id+index]</span>
+<span class="var">vectors</span>      <span class="com">// chunkId, subject_id</span>
+<span class="var">chatSessions</span>  <span class="com">// id, subject_id, created_at</span>
+<span class="var">quizSessions</span>  <span class="com">// id, subject_id, created_at</span>
+<span class="var">wrongQuestions</span><span class="com">// id, subject_id, [subject_id+reviewed]</span>
+<span class="var">reviewDocs</span>   <span class="com">// id, subject_id</span>
+<span class="var">cache</span>        <span class="com">// key, expires_at（TTL 自动过期）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Web Worker -->
+    <div class="tab-panel" data-panel="worker">
+      <div class="feature-card">
+        <div class="feature-icon purple">⚙️</div>
+        <h3>Web Worker 异步解析（主线程不阻塞）</h3>
+        <p>
+          PDF/DOCX/PPTX 解析、文本分块、向量计算全部丢入 Worker 后台线程。
+          Worker 池并发控制（<code>Math.min(hardwareConcurrency-1, 2)</code>），
+          支持任务队列、实时进度、批量取消。上传 100MB PDF 也能流畅操作 UI。
+        </p>
+      </div>
+
+      <!-- 交互式 Worker 演示 -->
+      <div class="worker-demo">
+        <h3 style="margin-bottom:24px;">交互式演示：异步任务进度</h3>
+        <div id="worker-tasks">
+          <div class="worker-task">
+            <div class="worker-task-header">
+              <div class="worker-task-name"><span>📄</span> 第3章 栈与队列.pdf</div>
+              <div class="worker-task-status running">解析中...</div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" data-task="0"></div></div>
+          </div>
+          <div class="worker-task">
+            <div class="worker-task-header">
+              <div class="worker-task-name"><span>✂️</span> 文本分块 (chunking)</div>
+              <div class="worker-task-status running">排队中...</div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" data-task="1"></div></div>
+          </div>
+          <div class="worker-task">
+            <div class="worker-task-header">
+              <div class="worker-task-name"><span>🔢</span> 向量计算 (384维)</div>
+              <div class="worker-task-status running">排队中...</div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" data-task="2"></div></div>
+          </div>
+          <div class="worker-task">
+            <div class="worker-task-header">
+              <div class="worker-task-name"><span>💾</span> 持久化到 IndexedDB</div>
+              <div class="worker-task-status running">排队中...</div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" data-task="3"></div></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" id="replay-worker" style="margin-top:8px;">重新演示</button>
+      </div>
+    </div>
+
+    <!-- Tab 4: SOLO Agent -->
+    <div class="tab-panel" data-panel="solo">
+      <div class="feature-card">
+        <div class="feature-icon orange">🤖</div>
+        <h3>SOLO Agent 主动智能（大赛核心创新）</h3>
+        <p>
+          区别于被动问答工具——Agent 在用户无操作时主动分析学情并推送建议。
+          5 个触发器：condition → action 模式，带冷却管理避免重复打扰。
+          支持网页通知（Notification API）+ Toast 卡片双通道推送。
+        </p>
+      </div>
+
+      <!-- 交互式 Agent 演示 -->
+      <div class="agent-demo">
+        <h3 style="margin-bottom:20px;">交互式演示：点击触发器体验 Agent 推送</h3>
+        <p style="color:var(--text-muted);margin-bottom:24px;font-size:14px;">
+          在真实应用中，这些触发器会在你答错题、复习完毕、长时间未学习时自动触发。<br>
+          这里可以手动触发体验效果（右下角弹出 Toast 卡片）。
+        </p>
+        <div class="agent-trigger-list">
+          <div class="agent-trigger" data-trigger="weak-drill">
+            <span class="agent-trigger-icon">⚠️</span>
+            <div class="agent-trigger-name">薄弱章节预警</div>
+            <div class="agent-trigger-desc">错题率 > 60% 且未复习 ≥ 3 道时触发</div>
+          </div>
+          <div class="agent-trigger" data-trigger="high-freq-wrong">
+            <span class="agent-trigger-icon">🔁</span>
+            <div class="agent-trigger-name">高频错题提醒</div>
+            <div class="agent-trigger-desc">同一知识点错 2 次以上时提醒</div>
+          </div>
+          <div class="agent-trigger" data-trigger="daily-report">
+            <span class="agent-trigger-icon">📊</span>
+            <div class="agent-trigger-name">每日学习日报</div>
+            <div class="agent-trigger-desc">每天生成学习统计 + 明日规划</div>
+          </div>
+          <div class="agent-trigger" data-trigger="review-streak">
+            <span class="agent-trigger-icon">🔥</span>
+            <div class="agent-trigger-name">连续复习奖励</div>
+            <div class="agent-trigger-desc">连续 3 天复习解锁鼓励</div>
+          </div>
+          <div class="agent-trigger" data-trigger="pending-todo">
+            <span class="agent-trigger-icon">📋</span>
+            <div class="agent-trigger-name">待办提醒</div>
+            <div class="agent-trigger-desc">有未复习错题时每 6 小时提醒</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: PWA -->
+    <div class="tab-panel" data-panel="pwa">
+      <div class="feature-card">
+        <div class="feature-icon green">📱</div>
+        <h3>PWA 离线 + 可安装</h3>
+        <p>
+          Service Worker 三级缓存策略：
+          <strong>HTML network-first</strong>（始终最新版本，避免白屏）、
+          <strong>JS/CSS stale-while-revalidate</strong>（秒开）、
+          <strong>CDN cache-first</strong>（向量模型 23MB 下载一次永久缓存，离线可推理）。
+          首次加载后断网仍可访问所有已缓存页面。
+        </p>
+        <div class="code-block">
+<span class="com">// Service Worker 缓存策略（public/sw.js）</span>
+<span class="kw">if</span> (<span class="var">isHTML</span>) <span class="kw">return</span> <span class="fn">networkFirst</span>(<span class="var">req</span>);  <span class="com">// HTML 始终最新</span>
+<span class="kw">if</span> (<span class="var">isCDN</span>)  <span class="kw">return</span> <span class="fn">cacheFirst</span>(<span class="var">req</span>);    <span class="com">// 向量模型永久缓存</span>
+<span class="kw">return</span> <span class="fn">staleWhileRevalidate</span>(<span class="var">req</span>);     <span class="com">// 静态资源秒开</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section>
+  <div class="container">
+    <h2 class="section-title">系统架构</h2>
+    <p class="section-sub">浏览器端全栈架构，服务端仅做 LLM 代理（API Key 不暴露）。</p>
+
+    <div class="arch-diagram">
+      <div class="arch-layer">
+        <div class="arch-layer-title">浏览器端（前端）</div>
+        <div class="arch-boxes">
+          <div class="arch-box green">React UI<br><small style="color:var(--text-faint)">9 个页面</small></div>
+          <div class="arch-box green">Zustand<br><small style="color:var(--text-faint)">全局状态</small></div>
+          <div class="arch-box green">React Router<br><small style="color:var(--text-faint)">懒加载</small></div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="arch-layer-title">RAG 引擎（浏览器端）</div>
+        <div class="arch-boxes">
+          <div class="arch-box purple">BM25<br><small style="color:var(--text-faint)">关键词检索</small></div>
+          <div class="arch-box purple">transformers.js<br><small style="color:var(--text-faint)">向量检索 384维</small></div>
+          <div class="arch-box purple">混合召回<br><small style="color:var(--text-faint)">Top8 截断</small></div>
+          <div class="arch-box purple">Map-Reduce<br><small style="color:var(--text-faint)">多资料压缩</small></div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="arch-layer-title">异步计算层</div>
+        <div class="arch-boxes">
+          <div class="arch-box blue">Web Worker 池<br><small style="color:var(--text-faint)">并发 ≤ 2</small></div>
+          <div class="arch-box blue">pdfjs-dist<br><small style="color:var(--text-faint)">PDF 解析</small></div>
+          <div class="arch-box blue">mammoth<br><small style="color:var(--text-faint)">DOCX 解析</small></div>
+          <div class="arch-box blue">JSZip<br><small style="color:var(--text-faint)">PPTX 解析</small></div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="arch-layer-title">持久化层</div>
+        <div class="arch-boxes">
+          <div class="arch-box green">IndexedDB<br><small style="color:var(--text-faint)">9 张分表</small></div>
+          <div class="arch-box green">Service Worker<br><small style="color:var(--text-faint)">PWA 离线</small></div>
+          <div class="arch-box green">Cache Storage<br><small style="color:var(--text-faint)">CDN 缓存</small></div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="arch-layer-title">SOLO Agent 主动智能层</div>
+        <div class="arch-boxes">
+          <div class="arch-box orange">触发器引擎<br><small style="color:var(--text-faint)">5 个触发器</small></div>
+          <div class="arch-box orange">冷却管理<br><small style="color:var(--text-faint)">localStorage</small></div>
+          <div class="arch-box orange">Notification<br><small style="color:var(--text-faint)">网页通知</small></div>
+          <div class="arch-box orange">每日日报<br><small style="color:var(--text-faint)">可导出</small></div>
+        </div>
+      </div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer">
+        <div class="arch-layer-title">服务端（Railway · 纯 LLM 代理）</div>
+        <div class="arch-boxes">
+          <div class="arch-box">Express<br><small style="color:var(--text-faint)">API 路由</small></div>
+          <div class="arch-box">DeepSeek-V4-Flash<br><small style="color:var(--text-faint)">LLM 推理</small></div>
+          <div class="arch-box">/api/parse<br><small style="color:var(--text-faint)">无状态解析</small></div>
+          <div class="arch-box">/api/knowledge<br><small style="color:var(--text-faint)">知识库</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section>
+  <div class="container">
+    <h2 class="section-title">技术栈</h2>
+    <p class="section-sub">全部用 Trae 开发完成，从零搭建。</p>
+    <div class="tech-grid">
+      <div class="tech-item"><h4>前端框架</h4><p>React 18 + TypeScript + Vite 6</p></div>
+      <div class="tech-item"><h4>状态管理</h4><p>Zustand + React Router 6</p></div>
+      <div class="tech-item"><h4>UI 样式</h4><p>Tailwind CSS + CSS Variables</p></div>
+      <div class="tech-item"><h4>Markdown 渲染</h4><p>react-markdown + remark/rehype</p></div>
+      <div class="tech-item"><h4>数学公式</h4><p>KaTeX（懒加载）</p></div>
+      <div class="tech-item"><h4>流程图</h4><p>Mermaid（按需加载）</p></div>
+      <div class="tech-item"><h4>本地存储</h4><p>IndexedDB（9 张分表）</p></div>
+      <div class="tech-item"><h4>RAG 检索</h4><p>BM25 + transformers.js 向量</p></div>
+      <div class="tech-item"><h4>异步计算</h4><p>Web Worker 池</p></div>
+      <div class="tech-item"><h4>文件解析</h4><p>pdfjs-dist + mammoth + JSZip</p></div>
+      <div class="tech-item"><h4>AI 模型</h4><p>DeepSeek-V4-Flash</p></div>
+      <div class="tech-item"><h4>部署</h4><p>Railway + Vercel</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Experience Guide -->
+<section>
+  <div class="container">
+    <h2 class="section-title">5 步体验指南</h2>
+    <p class="section-sub">进入应用后，按以下步骤体验完整流程。</p>
+    <div class="guide-steps">
+      <div class="guide-step">
+        <div class="guide-step-num">1</div>
+        <h4>加载演示数据</h4>
+        <p>设置页 → 滚动到底部 → 点击"加载示例数据"。预置 4 份数据结构课件 + 测验 + 错题，无需手动上传。</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-num">2</div>
+        <h4>AI 智能问答</h4>
+        <p>对话页 → 选择"数据结构"科目 → 提问"什么是栈？和队列有什么区别？"。AI 基于课件内容回答，标注来源。</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-num">3</div>
+        <h4>自动测验</h4>
+        <p>测验页 → 选择题型和难度 → 开始答题。故意答错几道，体验错题自动归档。</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-num">4</div>
+        <h4>SOLO Agent 推送</h4>
+        <p>答错几道题后等待 3 秒，右下角会自动弹出"薄弱章节预警"卡片。点击"去处理"跳转复习。</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-num">5</div>
+        <h4>每日日报</h4>
+        <p>分析页 → 点击"查看今日日报"。查看学习统计、各科目详情、薄弱知识点、明日规划，支持导出 Markdown。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Links -->
+<section>
+  <div class="container">
+    <h2 class="section-title">体验地址</h2>
+    <p class="section-sub">两个部署均可访问，数据存储在浏览器本地（IndexedDB）。</p>
+    <div class="links-grid">
+      <a href="https://csaiassistant-production.up.railway.app/" target="_blank" class="link-card">
+        <h4>主站（Railway）</h4>
+        <p>完整功能体验，推荐使用</p>
+        <div class="url">csaiassistant-production.up.railway.app</div>
+      </a>
+      <a href="https://cs-ai-assistant-hvw12ypl1-minghaoxia61-webs-projects.vercel.app/" target="_blank" class="link-card">
+        <h4>备用（Vercel）</h4>
+        <p>前端部署在 Vercel，API 代理到 Railway</p>
+        <div class="url">cs-ai-assistant.vercel.app</div>
+      </a>
+      <a href="https://github.com/minghaoxia61-web/CS_aiAssistant" target="_blank" class="link-card">
+        <h4>GitHub 仓库</h4>
+        <p>完整源码，含详细 README</p>
+        <div class="url">github.com/minghaoxia61-web/CS_aiAssistant</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CS_Assistant — Trae AI 大赛参赛作品 · 学习工作赛道</p>
+  <p style="margin-top:8px;">全栈 AI 辅教系统 · RAG 混合召回 · SOLO Agent 主动智能 · PWA 离线</p>
+</footer>
+
+<!-- Toast 容器 -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ====== 数字动画 ======
+const counters = document.querySelectorAll('.hero-meta-num');
+const animateCounters = () => {
+  counters.forEach(counter => {
+    const target = parseInt(counter.dataset.target);
+    const duration = 1500;
+    const start = Date.now();
+    const update = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      counter.textContent = Math.floor(target * eased);
+      if (progress < 1) requestAnimationFrame(update);
+      else counter.textContent = target;
+    };
+    update();
+  });
+};
+setTimeout(animateCounters, 300);
+
+// ====== Tab 切换 ======
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`[data-panel="${target}"]`).classList.add('active');
+  });
+});
+
+// ====== SOLO Agent Toast ======
+const triggerData = {
+  'weak-drill': {
+    icon: '⚠️', title: '薄弱章节预警', priority: 'high',
+    message: '你在「树」章节的错题率已达 67%（3/5 道错题未复习）。建议立即进行专项练习，重点复习二叉树遍历和哈夫曼树。',
+    action: '去专项练习'
+  },
+  'high-freq-wrong': {
+    icon: '🔁', title: '高频错题考点提醒', priority: 'high',
+    message: '「动态规划」知识点的「最优子结构」概念已连续答错 2 次。这是动态规划的核心基础，建议先复习课件第 7 章第 2 节。',
+    action: '查看错题'
+  },
+  'daily-report': {
+    icon: '📊', title: '每日学习日报已生成', priority: 'medium',
+    message: '今日学习统计：对话 12 轮，测验 2 次（正确率 60%），复习资料 1 份。明日建议：重点复习「树」和「动态规划」。',
+    action: '查看日报'
+  },
+  'review-streak': {
+    icon: '🔥', title: '连续复习奖励', priority: 'low',
+    message: '恭喜！你已连续 3 天进行复习，坚持就是胜利！今日已复习「栈与队列」章节，正确率提升至 85%。',
+    action: '继续加油'
+  },
+  'pending-todo': {
+    icon: '📋', title: '待办提醒', priority: 'medium',
+    message: '你有 4 道未复习的错题（数据结构 3 道，计算机组成原理 1 道）。建议在今天内完成复习，巩固记忆。',
+    action: '去复习'
+  }
+};
+
+document.querySelectorAll('.agent-trigger').forEach(trigger => {
+  trigger.addEventListener('click', () => {
+    const type = trigger.dataset.trigger;
+    const data = triggerData[type];
+    showToast(data);
+  });
+});
+
+function showToast(data) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${data.priority}`;
+  toast.innerHTML = `
+    <div class="toast-header">
+      <span class="toast-icon">${data.icon}</span>
+      <span class="toast-title">${data.title}</span>
+      <span class="toast-priority ${data.priority}">${data.priority === 'high' ? '高优先级' : data.priority === 'medium' ? '中优先级' : '低优先级'}</span>
+    </div>
+    <div class="toast-msg">${data.message}</div>
+    <div class="toast-actions">
+      <button class="toast-btn toast-btn-primary">${data.action}</button>
+      <button class="toast-btn toast-btn-ghost">稍后</button>
+    </div>
+  `;
+  container.appendChild(toast);
+
+  const remove = () => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  };
+  toast.querySelectorAll('.toast-btn').forEach(btn => btn.addEventListener('click', remove));
+  setTimeout(remove, 6000);
+}
+
+// ====== RAG 检索演示 ======
+const ragData = {
+  '什么是栈？和队列有什么区别？': {
+    answer: '栈和队列都是线性数据结构，区别在于操作受限程度不同：\n\n**栈（Stack）**：后进先出（LIFO），只允许在栈顶进行插入和删除。\n\n**队列（Queue）**：先进先出（FIFO），一端插入（队尾）、另一端删除（队头）。\n\n| 特性 | 栈 | 队列 |\n|---|---|---|\n| 操作端 | 栈顶 | 两端 |\n| 顺序 | LIFO | FIFO |\n| 应用 | 函数调用 | 任务调度 |\n\n> 来源：第3章 栈与队列.pdf [Page 2-3]',
+    chunks: [
+      { rank: 1, text: '栈是一种后进先出（LIFO）的线性表，只允许在栈顶进行插入和删除操作...', bm: 0.82, vec: 0.91 },
+      { rank: 2, text: '队列是一种先进先出（FIFO）的线性表，允许在队尾插入、队头删除...', bm: 0.78, vec: 0.89 },
+      { rank: 3, text: '栈和队列的主要区别在于操作受限的位置不同...', bm: 0.65, vec: 0.85 },
+      { rank: 4, text: '栈的应用：函数调用栈、表达式求值、括号匹配...', bm: 0.42, vec: 0.72 },
+      { rank: 5, text: '队列的应用：BFS、任务调度、缓冲区管理...', bm: 0.38, vec: 0.68 },
+      { rank: 6, text: '双端队列（Deque）是栈和队列的推广...', bm: 0.25, vec: 0.55 },
+    ]
+  },
+  '二叉树的遍历方式有哪些？': {
+    answer: '二叉树主要有 4 种遍历方式：\n\n1. **前序遍历**（Pre-order）：根 → 左 → 右\n2. **中序遍历**（In-order）：左 → 根 → 右\n3. **后序遍历**（Post-order）：左 → 右 → 根\n4. **层序遍历**（Level-order）：按层从上到下，使用队列\n\n```mermaid\ngraph T\n  A((A)) --> B((B))\n  A --> C((C))\n  B --> D((D))\n  B --> E((E))\n```\n\n> 来源：第5章 树.pdf [Page 5]',
+    chunks: [
+      { rank: 1, text: '二叉树的遍历方式主要有前序、中序、后序和层序四种...', bm: 0.85, vec: 0.94 },
+      { rank: 2, text: '前序遍历：先访问根节点，再遍历左子树，最后遍历右子树...', bm: 0.72, vec: 0.88 },
+      { rank: 3, text: '中序遍历：先遍历左子树，再访问根节点，最后遍历右子树...', bm: 0.68, vec: 0.86 },
+      { rank: 4, text: '后序遍历：先遍历左子树，再遍历右子树，最后访问根节点...', bm: 0.65, vec: 0.84 },
+      { rank: 5, text: '层序遍历：按层从上到下逐层访问，需要借助队列实现...', bm: 0.55, vec: 0.79 },
+      { rank: 6, text: '遍历的时间复杂度均为 O(n)，空间复杂度 O(h)...', bm: 0.35, vec: 0.62 },
+    ]
+  },
+  '动态规划的基本思想是什么？': {
+    answer: '动态规划的核心思想是：**将复杂问题分解为重叠子问题，通过子问题的最优解组合出原问题的最优解**。\n\n**两个关键要素**：\n1. **最优子结构**：问题的最优解包含子问题的最优解\n2. **重叠子问题**：子问题被重复计算，用备忘录/DP 表避免重复\n\n**示例**：斐波那契数列\n```python\n# 递归 O(2^n) → DP O(n)\ndp = [0] * (n+1)\ndp[1] = dp[2] = 1\nfor i in range(3, n+1):\n    dp[i] = dp[i-1] + dp[i-2]\n```\n\n> 来源：第7章 动态规划.pdf [Page 3]',
+    chunks: [
+      { rank: 1, text: '动态规划的基本思想是将待求解问题分解成若干个子问题...', bm: 0.88, vec: 0.95 },
+      { rank: 2, text: '最优子结构是动态规划适用的关键要素之一...', bm: 0.75, vec: 0.90 },
+      { rank: 3, text: '重叠子问题：子问题不是独立的，会被多次计算...', bm: 0.70, vec: 0.87 },
+      { rank: 4, text: '动态规划与分治法的区别在于子问题是否重叠...', bm: 0.50, vec: 0.78 },
+      { rank: 5, text: '备忘录方法（自顶向下）和DP表格（自底向上）...', bm: 0.45, vec: 0.72 },
+      { rank: 6, text: '经典DP问题：背包、最长公共子序列、矩阵连乘...', bm: 0.30, vec: 0.65 },
+    ]
+  }
+};
+
+document.querySelectorAll('.quick-q').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const q = btn.dataset.q;
+    const data = ragData[q];
+    if (!data) return;
+
+    const chatWindow = document.getElementById('rag-chat');
+    chatWindow.innerHTML = `
+      <div class="chat-msg user">
+        <div class="role">你</div>
+        <div class="content">${q}</div>
+      </div>
+      <div class="chat-msg ai">
+        <div class="role">CS_Assistant · DeepSeek-V4-Flash</div>
+        <div class="content">${data.answer.replace(/\n/g, '<br>')}</div>
+      </div>
+    `;
+
+    const panel = document.getElementById('retrieval-panel');
+    const chunksDiv = document.getElementById('retrieval-chunks');
+    panel.style.display = 'block';
+    chunksDiv.innerHTML = data.chunks.map(c => {
+      const total = (c.bm * 0.4 + c.vec * 0.6).toFixed(3);
+      return `
+        <div class="retrieval-chunk">
+          <div class="retrieval-rank">${c.rank}</div>
+          <div class="retrieval-text">${c.text}</div>
+          <div class="retrieval-scores">
+            <span class="score-bm">BM:${c.bm.toFixed(2)}</span>
+            <span class="score-vec">V:${c.vec.toFixed(2)}</span>
+            <span class="score-total">${total}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  });
+});
+
+// ====== Worker 进度演示 ======
+function runWorkerDemo() {
+  const fills = document.querySelectorAll('.progress-fill');
+  const statuses = document.querySelectorAll('.worker-task-status');
+  fills.forEach(f => { f.style.width = '0%'; f.classList.remove('done'); });
+  statuses.forEach(s => { s.textContent = '排队中...'; s.className = 'worker-task-status running'; });
+
+  const delays = [0, 800, 1600, 2400];
+  const durations = [1500, 1200, 2000, 800];
+
+  fills.forEach((fill, i) => {
+    setTimeout(() => {
+      statuses[i].textContent = '处理中...';
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 100 / (durations[i] / 30);
+        if (progress >= 100) {
+          progress = 100;
+          fill.style.width = '100%';
+          fill.classList.add('done');
+          statuses[i].textContent = '完成 ✓';
+          statuses[i].className = 'worker-task-status done';
+          clearInterval(interval);
+        } else {
+          fill.style.width = progress + '%';
+        }
+      }, 30);
+    }, delays[i]);
+  });
+}
+
+document.getElementById('replay-worker').addEventListener('click', runWorkerDemo);
+runWorkerDemo();
+</script>
+</body>
+</html>
