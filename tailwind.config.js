@@ -45,8 +45,8 @@ export default {
         moss: "var(--success)",
       },
       fontFamily: {
-        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
-        sans: ['"Geist"', '"Inter"', 'system-ui', 'sans-serif'],
+        serif: ['"Newsreader"', 'Georgia', 'serif'],
+        sans: ['"Syne"', '"Newsreader"', 'sans-serif'],
         mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
       },
       boxShadow: {

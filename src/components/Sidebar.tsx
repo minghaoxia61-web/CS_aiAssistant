@@ -25,12 +25,12 @@ export default function Sidebar() {
       <div className="px-5 pt-6 pb-5 shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-dim)] flex items-center justify-center shadow-glow">
-            <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} />
+            <GraduationCap className="w-5 h-5 text-[#0a0a0f]" strokeWidth={2.2} />
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
           </div>
           <div>
             <h1 className="font-display text-[20px] leading-none text-bone">CS_Assistant</h1>
-            <p className="text-[10px] tracking-[0.15em] uppercase text-bone-muted mt-1.5 font-medium">智能复习助手</p>
+            <p className="text-[10px] tracking-[0.15em] uppercase text-bone-muted mt-1.5 font-mono">// AI 智能助教</p>
           </div>
         </div>
       </div>

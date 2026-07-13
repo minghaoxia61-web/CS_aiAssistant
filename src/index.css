@@ -1,118 +1,118 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================================
-   设计系统 v2 — Aurora 暗色 + 电光青蓝
-   灵感：Linear / Vercel / Arc
+   设计系统 v3 — Terminal × Editorial
+   终端美学 + 编辑式排版，深色为主
    ============================================================ */
 
 /* ---------- 浅色主题 ---------- */
 :root {
   color-scheme: light;
-  /* 背景层 — 冷调奶白 */
-  --bg-base: #f6f7f9;
+  /* 背景层 — 暖调白 */
+  --bg-base: #f4f4f0;
   --bg-surface: #ffffff;
-  --bg-elevated: #f0f2f5;
-  --bg-hover: #e8ebf0;
-  --bg-active: #dde2e8;
+  --bg-elevated: #ebebe5;
+  --bg-hover: #e0e0d8;
+  --bg-active: #d4d4cc;
   /* 文本 */
-  --text-primary: #0a0e1a;
-  --text-secondary: #3d4351;
-  --text-muted: #6b7280;
-  --text-faint: #9aa3b2;
-  /* 主色 — 电光青蓝 */
-  --accent: #0066ff;
-  --accent-soft: #3b82f6;
-  --accent-dim: #0044cc;
-  --accent-glow: #60a5fa;
-  /* 辅色 — 紫罗兰 */
-  --violet: #7c3aed;
-  --violet-soft: #a78bfa;
-  --violet-glow: #c4b5fd;
-  /* 强调 — 青绿 */
-  --cyan: #06b6d4;
-  --cyan-glow: #67e8f9;
+  --text-primary: #0a0a0f;
+  --text-secondary: #3a3a48;
+  --text-muted: #6a6a78;
+  --text-faint: #9a9aa8;
+  /* 主色 — 终端绿 */
+  --accent: #00a878;
+  --accent-soft: #00c896;
+  --accent-dim: #008a64;
+  --accent-glow: #00ff9d;
+  /* 辅色 — 青蓝 */
+  --violet: #0099cc;
+  --violet-soft: #00b8e0;
+  --violet-glow: #00d4ff;
+  /* 强调 — 琥珀 */
+  --cyan: #e6a300;
+  --cyan-glow: #ffb800;
   /* 状态 */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  --success: #00a878;
+  --warning: #e6a300;
+  --danger: #e03060;
   /* 边框/阴影 */
-  --border: rgba(10, 14, 26, 0.08);
-  --border-strong: rgba(10, 14, 26, 0.14);
-  --shadow-sm: 0 1px 2px rgba(10, 14, 26, 0.04), 0 1px 3px rgba(10, 14, 26, 0.06);
-  --shadow-md: 0 4px 12px -2px rgba(10, 14, 26, 0.08), 0 2px 6px -1px rgba(10, 14, 26, 0.04);
-  --shadow-lg: 0 12px 32px -8px rgba(10, 14, 26, 0.12), 0 4px 12px -2px rgba(10, 14, 26, 0.06);
-  --shadow-glow: 0 0 32px -8px rgba(0, 102, 255, 0.25);
-  --shadow-glow-violet: 0 0 32px -8px rgba(124, 58, 237, 0.22);
+  --border: rgba(10, 10, 15, 0.08);
+  --border-strong: rgba(10, 10, 15, 0.14);
+  --shadow-sm: 0 1px 2px rgba(10, 10, 15, 0.04), 0 1px 3px rgba(10, 10, 15, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(10, 10, 15, 0.08), 0 2px 6px -1px rgba(10, 10, 15, 0.04);
+  --shadow-lg: 0 12px 32px -8px rgba(10, 10, 15, 0.12), 0 4px 12px -2px rgba(10, 10, 15, 0.06);
+  --shadow-glow: 0 0 32px -8px rgba(0, 168, 120, 0.25);
+  --shadow-glow-violet: 0 0 32px -8px rgba(0, 153, 204, 0.22);
   /* 玻璃 */
-  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-strong-bg: rgba(255, 255, 255, 0.88);
-  --glass-sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 247, 249, 0.86));
+  --glass-sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 244, 240, 0.88));
   /* 代码块 */
-  --code-bg: #0f1419;
-  --code-text: #e6e9ef;
+  --code-bg: #0a0a0f;
+  --code-text: #e8e8f0;
   /* 背景装饰 */
-  --grid-color: rgba(10, 14, 26, 0.025);
-  /* 装饰光晕 — 明显可见 */
-  --blob-1: radial-gradient(ellipse 800px 500px at 8% 5%, rgba(0, 102, 255, 0.18), transparent 65%);
-  --blob-2: radial-gradient(ellipse 700px 450px at 92% 85%, rgba(124, 58, 237, 0.16), transparent 65%);
-  --blob-3: radial-gradient(ellipse 600px 400px at 50% 50%, rgba(6, 182, 212, 0.10), transparent 70%);
+  --grid-color: rgba(10, 10, 15, 0.025);
+  /* 装饰光晕 */
+  --blob-1: radial-gradient(ellipse 800px 500px at 8% 5%, rgba(0, 168, 120, 0.14), transparent 65%);
+  --blob-2: radial-gradient(ellipse 700px 450px at 92% 85%, rgba(0, 153, 204, 0.12), transparent 65%);
+  --blob-3: radial-gradient(ellipse 600px 400px at 50% 50%, rgba(230, 163, 0, 0.08), transparent 70%);
 }
 
 /* ---------- 暗色主题（默认） ---------- */
 .dark {
   color-scheme: dark;
-  /* 背景层 — 深空 */
-  --bg-base: #07080d;
-  --bg-surface: #0d0f17;
-  --bg-elevated: #141826;
-  --bg-hover: #1c2030;
-  --bg-active: #252a3d;
+  /* 背景层 — 深空黑 */
+  --bg-base: #08080d;
+  --bg-surface: #0e0e15;
+  --bg-elevated: #15151f;
+  --bg-hover: #1c1c2a;
+  --bg-active: #252535;
   /* 文本 */
-  --text-primary: #f1f3f9;
-  --text-secondary: #c2c8d4;
-  --text-muted: #8a91a3;
-  --text-faint: #5d6477;
-  /* 主色 — 电光青蓝 */
-  --accent: #3b82f6;
-  --accent-soft: #60a5fa;
-  --accent-dim: #2563eb;
-  --accent-glow: #93c5fd;
-  /* 辅色 — 紫罗兰 */
-  --violet: #a78bfa;
-  --violet-soft: #c4b5fd;
-  --violet-glow: #ddd6fe;
-  /* 强调 — 青绿 */
-  --cyan: #22d3ee;
-  --cyan-glow: #a5f3fc;
+  --text-primary: #e8e8f0;
+  --text-secondary: #b0b0c0;
+  --text-muted: #7a7a90;
+  --text-faint: #4a4a5e;
+  /* 主色 — 终端绿 */
+  --accent: #00ff9d;
+  --accent-soft: #00ffae;
+  --accent-dim: #00cc7a;
+  --accent-glow: #00ff9d;
+  /* 辅色 — 青蓝 */
+  --violet: #00d4ff;
+  --violet-soft: #33ddff;
+  --violet-glow: #00d4ff;
+  /* 强调 — 琥珀 */
+  --cyan: #ffb800;
+  --cyan-glow: #ffd040;
   /* 状态 */
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  --success: #00ff9d;
+  --warning: #ffb800;
+  --danger: #ff3d8b;
   /* 边框/阴影 */
   --border: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(255, 255, 255, 0.12);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 40px -10px rgba(59, 130, 246, 0.45);
-  --shadow-glow-violet: 0 0 40px -10px rgba(167, 139, 250, 0.4);
+  --shadow-glow: 0 0 40px -10px rgba(0, 255, 157, 0.35);
+  --shadow-glow-violet: 0 0 40px -10px rgba(0, 212, 255, 0.3);
   /* 玻璃 */
-  --glass-bg: rgba(20, 24, 38, 0.6);
-  --glass-strong-bg: rgba(29, 34, 52, 0.85);
-  --glass-sidebar-bg: linear-gradient(180deg, rgba(13, 15, 23, 0.92), rgba(7, 8, 13, 0.86));
+  --glass-bg: rgba(21, 21, 31, 0.65);
+  --glass-strong-bg: rgba(28, 28, 42, 0.85);
+  --glass-sidebar-bg: linear-gradient(180deg, rgba(14, 14, 21, 0.94), rgba(8, 8, 13, 0.88));
   /* 代码块 */
-  --code-bg: #050609;
-  --code-text: #e6e9ef;
+  --code-bg: #050508;
+  --code-text: #e8e8f0;
   /* 背景装饰 */
-  --grid-color: rgba(255, 255, 255, 0.02);
-  /* 装饰光晕 — 暗色下明显 */
-  --blob-1: radial-gradient(ellipse 900px 550px at 8% 5%, rgba(59, 130, 246, 0.28), transparent 65%);
-  --blob-2: radial-gradient(ellipse 800px 500px at 92% 85%, rgba(167, 139, 250, 0.24), transparent 65%);
-  --blob-3: radial-gradient(ellipse 700px 450px at 50% 50%, rgba(34, 211, 238, 0.12), transparent 70%);
+  --grid-color: rgba(0, 255, 157, 0.02);
+  /* 装饰光晕 — 终端霓虹 */
+  --blob-1: radial-gradient(ellipse 900px 550px at 8% 5%, rgba(0, 255, 157, 0.18), transparent 65%);
+  --blob-2: radial-gradient(ellipse 800px 500px at 92% 85%, rgba(0, 212, 255, 0.14), transparent 65%);
+  --blob-3: radial-gradient(ellipse 700px 450px at 50% 50%, rgba(255, 184, 0, 0.06), transparent 70%);
 }
 
 html,
@@ -123,7 +123,7 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-family: 'Newsreader', Georgia, serif;
   background-color: var(--bg-base);
   background-image:
     var(--blob-1),
@@ -134,7 +134,7 @@ body {
   background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
   background-attachment: fixed;
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.65;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -152,11 +152,11 @@ textarea,
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.28);
+  background: rgba(0, 255, 157, 0.2);
   color: var(--accent-glow);
 }
 
-/* 滚动条 — 极简 */
+/* 滚动条 — 终端风格 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -207,23 +207,25 @@ textarea,
     box-shadow: var(--shadow-lg);
   }
 
-  /* 按钮 — 胶囊形 + 渐变光效 */
+  /* 按钮 — 胶囊形 + 终端绿光效 */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer select-none;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
   }
   .btn-primary {
-    @apply btn text-white;
+    @apply btn text-[#0a0a0f];
     background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-    box-shadow: 0 2px 8px -2px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 2px 8px -2px rgba(0, 255, 157, 0.4), 0 0 0 1px rgba(0, 255, 157, 0.2);
   }
   .btn-primary:hover {
     background: linear-gradient(135deg, var(--accent-soft), var(--accent));
-    box-shadow: 0 4px 16px -2px rgba(59, 130, 246, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 16px -2px rgba(0, 255, 157, 0.5), 0 0 0 1px rgba(0, 255, 157, 0.3);
     transform: translateY(-1px);
   }
   .btn-primary:active {
     transform: translateY(0);
-    box-shadow: 0 1px 4px -1px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 1px 4px -1px rgba(0, 255, 157, 0.4);
   }
   .btn-ghost {
     @apply btn transition-all duration-200;
@@ -242,6 +244,7 @@ textarea,
     background-color: var(--bg-hover);
     border-color: var(--accent);
     color: var(--accent-glow);
+    box-shadow: 0 0 16px -4px rgba(0, 255, 157, 0.25);
   }
   .btn-outline:disabled {
     opacity: 0.4;
@@ -252,6 +255,7 @@ textarea,
   /* 输入框 */
   .input {
     @apply w-full rounded-lg px-3.5 py-2.5 transition-all duration-200 text-sm;
+    font-family: 'JetBrains Mono', monospace;
     background-color: var(--bg-elevated);
     border: 1px solid var(--border);
     color: var(--text-primary);
@@ -263,12 +267,13 @@ textarea,
     outline: none;
     border-color: var(--accent);
     background-color: var(--bg-surface);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
   }
 
   /* 标签 */
   .chip {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer;
+    font-family: 'JetBrains Mono', monospace;
     border: 1px solid var(--border-strong);
     background-color: var(--bg-elevated);
   }
@@ -279,14 +284,15 @@ textarea,
 
   .label {
     @apply text-xs font-medium uppercase tracking-wider mb-1.5 block;
+    font-family: 'JetBrains Mono', monospace;
     color: var(--text-muted);
   }
 }
 
-/* 标题字体 */
+/* 标题字体 — Syne 几何感 */
 .font-display {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-weight: 400;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -300,9 +306,9 @@ textarea,
 .prose h2,
 .prose h3,
 .prose h4 {
-  font-family: 'Geist', sans-serif;
+  font-family: 'Syne', sans-serif;
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.5em;
   margin-bottom: 0.6em;
   line-height: 1.3;
@@ -315,16 +321,27 @@ textarea,
   border-bottom: 1px solid var(--border);
 }
 .prose h3 { font-size: 1.12rem; }
-.prose h4 { font-size: 1rem; color: var(--accent); }
+.prose h4 { font-size: 1rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .prose p { margin: 0.7em 0; }
 .prose ul,
 .prose ol { margin: 0.7em 0; padding-left: 1.5em; }
-.prose ul { list-style: disc; }
+.prose ul { list-style: none; }
+.prose ul li { 
+  position: relative;
+  padding-left: 1.2em;
+}
+.prose ul li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+}
 .prose ol { list-style: decimal; }
 .prose li { margin: 0.3em 0; }
 .prose li::marker { color: var(--accent); }
 .prose strong { color: var(--text-primary); font-weight: 600; }
-.prose em { color: var(--violet); }
+.prose em { color: var(--violet); font-style: italic; }
 .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .prose a:hover { color: var(--accent-glow); }
 .prose blockquote {
@@ -332,13 +349,14 @@ textarea,
   padding: 0.3em 0 0.3em 1em;
   margin: 0.9em 0;
   color: var(--text-secondary);
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(0, 255, 157, 0.04);
   border-radius: 0 6px 6px 0;
+  font-style: italic;
 }
 .prose code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85em;
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(0, 255, 157, 0.1);
   color: var(--accent);
   padding: 0.15em 0.4em;
   border-radius: 4px;
@@ -377,7 +395,11 @@ textarea,
 .prose th {
   background: var(--bg-elevated);
   color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
 }
 .prose hr {
   border: none;
@@ -385,25 +407,25 @@ textarea,
   margin: 1.5em 0;
 }
 
-/* 代码高亮 — 现代深色主题 */
+/* 代码高亮 — 终端配色 */
 .hljs { color: var(--code-text); background: transparent; }
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-built_in { color: #c792ea; }
+.hljs-built_in { color: #00ff9d; }
 .hljs-string,
-.hljs-attr { color: #c3e88d; }
+.hljs-attr { color: #ffb800; }
 .hljs-number,
-.hljs-literal { color: #f78c6c; }
-.hljs-comment { color: #5d6477; font-style: italic; }
+.hljs-literal { color: #ff3d8b; }
+.hljs-comment { color: #4a4a5e; font-style: italic; }
 .hljs-function .hljs-title,
-.hljs-title.function_ { color: #82aaff; }
+.hljs-title.function_ { color: #00d4ff; }
 .hljs-variable,
-.hljs-template-variable { color: #ffcb6b; }
+.hljs-template-variable { color: #ffb800; }
 .hljs-type,
-.hljs-class .hljs-title { color: #ffcb6b; }
-.hljs-meta { color: #82aaff; }
-.hljs-tag { color: #f07178; }
-.hljs-name { color: #ffcb6b; }
+.hljs-class .hljs-title { color: #ffb800; }
+.hljs-meta { color: #00d4ff; }
+.hljs-tag { color: #ff3d8b; }
+.hljs-name { color: #ffb800; }
 
 /* 速记卡翻转 */
 .flip-card {
@@ -430,7 +452,7 @@ textarea,
   transform: rotateY(180deg);
 }
 
-/* 流式光标 */
+/* 流式光标 — 终端方块 */
 .stream-cursor::after {
   content: '▋';
   display: inline-block;
@@ -457,8 +479,10 @@ textarea,
 /* 消息气泡 */
 .msg-bubble-user {
   background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-  color: white;
+  color: #0a0a0f;
   border-radius: 1rem 1rem 0.25rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
 }
 .msg-bubble-ai {
   background: var(--glass-bg);
@@ -470,7 +494,7 @@ textarea,
   border-color: var(--border-strong);
 }
 
-/* 渐变进度条 */
+/* 渐变进度条 — 终端三色 */
 .progress-gradient {
   background: linear-gradient(90deg, var(--accent), var(--violet), var(--cyan));
   background-size: 200% 100%;
@@ -502,7 +526,7 @@ textarea,
   box-shadow: var(--shadow-lg);
 }
 
-/* 导航项 */
+/* 导航项 — 终端高亮 */
 .nav-item-glow {
   position: relative;
   overflow: hidden;
@@ -511,7 +535,7 @@ textarea,
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, transparent, rgba(59, 130, 246, 0.08), transparent);
+  background: linear-gradient(135deg, transparent, rgba(0, 255, 157, 0.06), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -533,4 +557,12 @@ textarea,
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--accent), var(--violet), transparent);
   opacity: 0.4;
+}
+
+/* 终端风格标题装饰 */
+.terminal-prompt::before {
+  content: '> ';
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
 }
