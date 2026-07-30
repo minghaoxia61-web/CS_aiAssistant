@@ -5,6 +5,7 @@ import {
   BookOpen,
   BookX,
   CalendarCheck2,
+  Check,
   Flame,
   GraduationCap,
   MessageSquareText,
@@ -15,6 +16,7 @@ import {
 import PageHeader from '@/components/PageHeader'
 import { useStore } from '@/lib/store'
 import { getDueQuestions } from '@/lib/spaced-repetition'
+import { cn } from '@/lib/utils'
 import type { ChatSession, Material, QuizSession, WrongQuestion } from '@/shared/types'
 
 interface DashboardData {
@@ -77,6 +79,18 @@ export default function Dashboard() {
 
   const latestQuiz = [...metrics.answered].sort((a, b) => b.created_at - a.created_at)[0]
   const recentChat = [...data.chats].sort((a, b) => b.created_at - a.created_at)[0]
+  const learningLoop = [
+    { label: '导入资料', complete: data.materials.some((item) => item.status === 'ready'), path: '/library' },
+    { label: '资料问答', complete: data.chats.some((item) => item.messages.length > 1), path: '/chat' },
+    { label: '完成测验', complete: metrics.answered.length > 0, path: '/quiz' },
+    {
+      label: '巩固错题',
+      complete:
+        metrics.answered.length > 0 &&
+        (data.wrongQuestions.length === 0 || data.wrongQuestions.every((item) => item.reviewed)),
+      path: '/wrong-book',
+    },
+  ]
 
   return (
     <div className="h-full overflow-y-auto">
@@ -128,6 +142,53 @@ export default function Dashboard() {
           <MetricCard icon={<CalendarCheck2 />} label="今日待复习" value={`${metrics.due.length}`} hint="按遗忘规律安排" tone="green" />
           <MetricCard icon={<Flame />} label="连续学习" value={`${metrics.streak} 天`} hint="保持每天一点进步" tone="orange" />
           <MetricCard icon={<BookOpen />} label="已收录资料" value={`${data.materials.length}`} hint="可用于 AI 检索" tone="violet" />
+        </section>
+
+        <section className="panel p-5 mb-5">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <span className="eyebrow">Learning loop</span>
+              <h3 className="text-base font-semibold text-bone mt-1">本轮学习闭环</h3>
+            </div>
+            <span className="text-xs text-bone-muted">
+              {learningLoop.filter((item) => item.complete).length}/{learningLoop.length} 已完成
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {learningLoop.map((item, index) => {
+              const firstIncomplete = learningLoop.findIndex((stage) => !stage.complete)
+              const active = index === firstIncomplete
+              return (
+                <button
+                  key={item.label}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all',
+                    item.complete
+                      ? 'border-[var(--accent-border)] bg-[var(--accent-soft)]'
+                      : active
+                        ? 'border-[var(--accent)] bg-[var(--bg-elevated)] shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--bg-surface)]',
+                  )}
+                  onClick={() => navigate(item.path)}
+                >
+                  <span
+                    className={cn(
+                      'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0',
+                      item.complete ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-elevated)] text-bone-muted',
+                    )}
+                  >
+                    {item.complete ? <Check className="w-3.5 h-3.5" /> : String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span>
+                    <strong className="block text-xs text-bone">{item.label}</strong>
+                    <small className={cn('text-[10px]', active ? 'text-[var(--accent)]' : 'text-bone-faint')}>
+                      {item.complete ? '已完成' : active ? '建议下一步' : '待完成'}
+                    </small>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_.8fr] gap-5">

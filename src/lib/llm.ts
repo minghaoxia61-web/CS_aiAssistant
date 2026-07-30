@@ -1,6 +1,7 @@
 // LLM 调用客户端 + 提示词构建器
 // 通过 IPC 转发到主进程发起请求，避免渲染进程 CORS 问题，且 API Key 不暴露到前端
 import type { ApiConfig, Material, QuizQuestion, QuizQuestionType, QuizDifficulty, QuizRatios, LlmMessage, UserProfile } from '@/shared/types'
+import { classifyLlmError, delay, toLlmError } from '@/lib/llm-reliability'
 
 export interface StreamChatOptions {
   config: ApiConfig
@@ -14,64 +15,105 @@ export interface StreamChatOptions {
 /** 流式调用：通过主进程 IPC 转发，逐 token 回调 */
 export async function streamChat(opts: StreamChatOptions): Promise<string> {
   const { config, messages, onToken, signal, temperature, maxTokens } = opts
-  const requestId = await window.api.llmStream({ config, messages, temperature, maxTokens })
+  const maxAttempts = 2
 
-  return new Promise<string>((resolve, reject) => {
-    let settled = false
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let receivedToken = false
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        let settled = false
+        let requestId = ''
+        let timeout: ReturnType<typeof setTimeout> | undefined
 
-    const cleanup = () => {
-      offToken()
-      offDone()
-      offError()
-    }
-
-    const offToken = window.api.onLlmToken((payload) => {
-      if (payload.requestId !== requestId || settled) return
-      onToken(payload.token)
-    })
-
-    const offDone = window.api.onLlmDone((payload) => {
-      if (payload.requestId !== requestId || settled) return
-      settled = true
-      cleanup()
-      resolve(payload.full)
-    })
-
-    const offError = window.api.onLlmError((payload) => {
-      if (payload.requestId !== requestId || settled) return
-      settled = true
-      cleanup()
-      reject(new Error(payload.message))
-    })
-
-    // 支持中止
-    if (signal) {
-      if (signal.aborted) {
-        settled = true
-        cleanup()
-        window.api.llmAbort(requestId)
-        reject(new DOMException('Aborted', 'AbortError'))
-        return
-      }
-      signal.addEventListener(
-        'abort',
-        () => {
+        const cleanup = () => {
+          if (timeout) clearTimeout(timeout)
+          offToken()
+          offDone()
+          offError()
+          signal?.removeEventListener('abort', handleAbort)
+        }
+        const settleError = (error: unknown) => {
           if (settled) return
-          window.api.llmAbort(requestId)
-        },
-        { once: true },
-      )
+          settled = true
+          cleanup()
+          reject(error)
+        }
+        const handleAbort = () => {
+          if (requestId) void window.api.llmAbort(requestId)
+          settleError(new DOMException('Aborted', 'AbortError'))
+        }
+        const offToken = window.api.onLlmToken((payload) => {
+          if (payload.requestId !== requestId || settled) return
+          receivedToken = true
+          onToken(payload.token)
+        })
+        const offDone = window.api.onLlmDone((payload) => {
+          if (payload.requestId !== requestId || settled) return
+          settled = true
+          cleanup()
+          resolve(payload.full)
+        })
+        const offError = window.api.onLlmError((payload) => {
+          if (payload.requestId !== requestId || settled) return
+          settleError(new Error(payload.message))
+        })
+
+        if (signal?.aborted) {
+          handleAbort()
+          return
+        }
+        signal?.addEventListener('abort', handleAbort, { once: true })
+
+        void window.api.llmStream({ config, messages, temperature, maxTokens }).then(
+          (id) => {
+            requestId = id
+            if (settled) {
+              void window.api.llmAbort(requestId)
+              return
+            }
+            timeout = setTimeout(() => {
+              void window.api.llmAbort(requestId)
+              settleError(new Error('模型响应超时'))
+            }, 90_000)
+          },
+          (error) => settleError(error),
+        )
+      })
+    } catch (error) {
+      const info = classifyLlmError(error)
+      if (signal?.aborted || receivedToken || !info.retryable || attempt === maxAttempts) {
+        throw toLlmError(error)
+      }
+      await delay(700 * attempt, signal)
     }
-  })
+  }
+  throw new Error('模型调用失败，请稍后重试。')
 }
 
 /** 非流式调用（用于结构化 JSON 输出，如出题/批改） */
 export async function chatJSON(opts: Omit<StreamChatOptions, 'onToken'>): Promise<string> {
   const { config, messages, signal, temperature, maxTokens } = opts
-  const res = await window.api.llmJSON({ config, messages, temperature, maxTokens })
-  if (!res.ok) throw new Error((res as { error: string }).error)
-  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-  return res.content
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    try {
+      const response = window.api.llmJSON({ config, messages, temperature, maxTokens })
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('模型响应超时')), 90_000)
+      })
+      const res = await Promise.race([response, timeout]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId)
+      })
+      if (!res.ok) throw new Error((res as { error: string }).error)
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      return res.content
+    } catch (error) {
+      const info = classifyLlmError(error)
+      if (signal?.aborted || !info.retryable || attempt === 2) throw toLlmError(error)
+      await delay(700 * attempt, signal)
+    }
+  }
+  throw new Error('模型调用失败，请稍后重试。')
 }
 
 // ---------- 上下文构建 ----------

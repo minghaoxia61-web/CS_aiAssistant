@@ -1,8 +1,10 @@
 // 资料库页：上传 / 解析 / 科目分组 / 标签筛选 / 批量管理
 import { useEffect, useState, useCallback, useMemo, type DragEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Library as LibraryIcon, Upload, FileText, Trash2, Loader2, CheckCircle2, AlertCircle, Plus,
-  Tag, FolderInput, Square, CheckSquare, X, Image as ImageIcon,
+  Tag, FolderInput, Square, CheckSquare, X, Image as ImageIcon, Sparkles, MessageSquareText,
+  ListChecks, NotebookTabs, ArrowRight,
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
@@ -51,6 +53,7 @@ function checkDuplicates(paths: string[], existingNames: Set<string>): { dups: s
 }
 
 export default function Library() {
+  const navigate = useNavigate()
   const { subjects, currentSubjectId, createSubject } = useStore()
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(false)
@@ -59,6 +62,7 @@ export default function Library() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [menu, setMenu] = useState<'none' | 'tag' | 'move'>('none')
   const [dragging, setDragging] = useState(false)
+  const [latestReadyName, setLatestReadyName] = useState('')
 
   const subject = subjects.find((s) => s.id === currentSubjectId)
 
@@ -105,6 +109,7 @@ export default function Library() {
 
   const selectedCount = selectedIds.size
   const allFilteredSelected = filteredMaterials.length > 0 && filteredMaterials.every((m) => selectedIds.has(m.id))
+  const readyMaterials = materials.filter((material) => material.status === 'ready')
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -150,7 +155,8 @@ export default function Library() {
       if (proceed) toUpload = paths
     }
     if (toUpload.length === 0) return
-    await window.api.uploadMaterials(currentSubjectId, toUpload)
+    const created = await window.api.uploadMaterials(currentSubjectId, toUpload)
+    setLatestReadyName(created[0]?.filename || '')
     refresh()
   }, [currentSubjectId, materials, refresh])
 
@@ -284,6 +290,55 @@ export default function Library() {
             支持 PDF / DOCX / PPTX / TXT / MD / 图片(JPG·PNG)，图片自动 OCR 识别
           </p>
         </button>
+
+        {readyMaterials.length > 0 && (
+          <section className="panel p-5 mt-5 border-[var(--accent-border)] bg-[var(--accent-soft)]">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="w-9 h-9 rounded-xl bg-[var(--accent-soft-strong)] text-[var(--accent)] flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <div>
+                  <span className="eyebrow">Learning loop</span>
+                  <h3 className="text-base font-semibold text-bone mt-1">
+                    {latestReadyName ? `「${latestReadyName}」已进入学习工作流` : '资料已准备好，继续完成学习闭环'}
+                  </h3>
+                  <p className="text-xs text-bone-muted mt-1">
+                    当前有 {readyMaterials.length} 份资料可检索。建议先提问理解，再测验暴露薄弱点，最后生成复习材料。
+                  </p>
+                </div>
+              </div>
+              {latestReadyName && (
+                <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setLatestReadyName('')}>
+                  收起提示
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+              <WorkflowAction
+                icon={<MessageSquareText />}
+                step="01"
+                title="基于资料提问"
+                desc="验证检索与引用是否准确"
+                onClick={() => navigate('/chat')}
+              />
+              <WorkflowAction
+                icon={<ListChecks />}
+                step="02"
+                title="生成一次测验"
+                desc="自动识别掌握与薄弱知识点"
+                onClick={() => navigate('/quiz')}
+              />
+              <WorkflowAction
+                icon={<NotebookTabs />}
+                step="03"
+                title="生成复习材料"
+                desc="形成摘要、提纲与记忆卡片"
+                onClick={() => navigate('/review')}
+              />
+            </div>
+          </section>
+        )}
 
         {/* 标签筛选 + 批量操作工具栏 */}
         {materials.length > 0 && (
@@ -486,6 +541,37 @@ export default function Library() {
         </div>
       )}
     </div>
+  )
+}
+
+function WorkflowAction({
+  icon,
+  step,
+  title,
+  desc,
+  onClick,
+}: {
+  icon: ReactNode
+  step: string
+  title: string
+  desc: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      className="flex items-center gap-3 text-left rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-3.5 py-3 hover:border-[var(--accent-border)] hover:-translate-y-0.5 transition-all"
+      onClick={onClick}
+    >
+      <span className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] text-[var(--accent)] flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+        {icon}
+      </span>
+      <span className="flex-1 min-w-0">
+        <small className="text-[9px] tracking-[0.14em] uppercase text-bone-faint">Step {step}</small>
+        <strong className="block text-xs text-bone mt-0.5">{title}</strong>
+        <span className="block text-[10px] text-bone-muted mt-0.5 truncate">{desc}</span>
+      </span>
+      <ArrowRight className="w-3.5 h-3.5 text-bone-faint" />
+    </button>
   )
 }
 

@@ -16,11 +16,12 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "check": "tsc -b --noEmit",
-    "test": "tsx --test tests/spaced-repetition.test.ts tests/rag.test.ts",
+    "test": "tsx --test tests/*.test.ts",
     "package": "npm run build && electron-builder --win",
     "package:portable": "npm run build && electron-builder --win portable"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.111.0",
     "@xenova/transformers": "^2.17.2",
     "clsx": "^2.1.1",
     "electron-store": "^8.2.0",
@@ -42,7 +43,7 @@
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
     "tailwind-merge": "^3.0.2",
-    "uuid": "^9.0.1",
+    "uuid": "^11.1.1",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -52,7 +53,6 @@
     "@types/node": "^22.15.30",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
     "babel-plugin-react-dev-locator": "^1.0.0",

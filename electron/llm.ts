@@ -71,6 +71,18 @@ function createRequest(
     headers,
   };
 
+  let settled = false;
+  const fail = (message: string) => {
+    if (settled) return;
+    settled = true;
+    onError(message);
+  };
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    onEnd();
+  };
+
   const req = lib.request(options, (res) => {
     // 非 2xx 状态码：收集错误信息
     if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
@@ -79,23 +91,32 @@ function createRequest(
       res.on('data', (c) => (errBuf += c));
       res.on('end', () => {
         const snippet = errBuf.slice(0, 400) || res.statusMessage || '';
-        onError(`API 请求失败 (${res.statusCode})：${snippet}`);
+        fail(`API 请求失败 (${res.statusCode})：${snippet}`);
       });
       return;
     }
 
     res.on('data', onData);
-    res.on('end', onEnd);
+    res.on('end', finish);
   });
 
   req.on('error', (e) => {
-    onError(e.message);
+    fail(e.message);
+  });
+  req.setTimeout(90_000, () => {
+    req.destroy(new Error('模型响应超时'));
   });
 
   req.write(body);
   req.end();
 
-  return { abort: () => req.destroy() };
+  return {
+    abort: () => {
+      if (settled) return;
+      settled = true;
+      req.destroy();
+    },
+  };
 }
 
 /**
@@ -108,9 +129,9 @@ export function streamChat(
   const body = buildBody({ ...opts, stream: true });
   let buffer = '';
   let full = '';
-  const aborted = false;
+  let aborted = false;
 
-  return createRequest(
+  const request = createRequest(
     opts.config,
     body,
     (chunk: Buffer) => {
@@ -142,6 +163,12 @@ export function streamChat(
       if (!aborted) cb.onError(msg);
     },
   );
+  return {
+    abort: () => {
+      aborted = true;
+      request.abort();
+    },
+  };
 }
 
 /**

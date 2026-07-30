@@ -38,8 +38,33 @@ function withUserHeaders(init?: RequestInit): RequestInit {
 }
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, withUserHeaders(init))
-  return res.json() as Promise<T>
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30_000)
+  try {
+    const res = await fetch(`${API_BASE}${url}`, withUserHeaders({ ...init, signal: controller.signal }))
+    const text = await res.text()
+    let data: unknown = null
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      data = text
+    }
+    if (!res.ok) {
+      const message =
+        typeof data === 'object' && data && 'error' in data
+          ? String((data as { error: unknown }).error)
+          : `请求失败 (${res.status})`
+      throw new Error(message)
+    }
+    return data as T
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络后重试')
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 // ========== 文件上传：假 path 映射 ==========
@@ -296,9 +321,15 @@ export function createHttpApi(): ElectronAPI {
         signal: controller.signal,
       }))
         .then(async (res) => {
-          const reader = res.body!.getReader()
+          if (!res.ok) {
+            const data = await res.json().catch(() => null) as { error?: string } | null
+            throw new Error(data?.error || `模型请求失败 (${res.status})`)
+          }
+          if (!res.body) throw new Error('模型服务未返回可读取的响应')
+          const reader = res.body.getReader()
           const decoder = new TextDecoder()
           let buffer = ''
+          let completed = false
           while (true) {
             const { done, value } = await reader.read()
             if (done) break
@@ -314,11 +345,13 @@ export function createHttpApi(): ElectronAPI {
                     cb({ requestId: evt.requestId, token: evt.token })
                   }
                 } else if (evt.type === 'done') {
+                  completed = true
                   for (const cb of doneCallbacks) {
                     cb({ requestId: evt.requestId, full: evt.full })
                   }
                   abortControllers.delete(evt.requestId)
                 } else if (evt.type === 'error') {
+                  completed = true
                   for (const cb of errorCallbacks) {
                     cb({ requestId: evt.requestId, message: evt.message })
                   }
@@ -328,6 +361,12 @@ export function createHttpApi(): ElectronAPI {
                 // 忽略不完整 JSON
               }
             }
+          }
+          if (!completed && abortControllers.has(requestId)) {
+            for (const cb of errorCallbacks) {
+              cb({ requestId, message: '模型连接意外中断' })
+            }
+            abortControllers.delete(requestId)
           }
         })
         .catch((e) => {
@@ -357,7 +396,11 @@ export function createHttpApi(): ElectronAPI {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(opts),
       }))
-      return res.json()
+      const data = await res.json().catch(() => ({ ok: false, error: `模型请求失败 (${res.status})` }))
+      if (!res.ok && !('error' in data)) {
+        return { ok: false as const, error: `模型请求失败 (${res.status})` }
+      }
+      return data
     },
     onLlmToken(cb) {
       tokenCallbacks.add(cb)

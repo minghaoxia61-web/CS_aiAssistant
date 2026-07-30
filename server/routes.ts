@@ -18,6 +18,7 @@ import {
 import { parseBuffer, getFileType } from './parsers-server';
 import { streamChat, chatJSON } from '../electron/llm';
 import { CATALOG } from './knowledge/catalog';
+import { resolveLlmConfig } from './llm-config';
 import type {
   ApiConfig,
   ApiConfigItem,
@@ -125,6 +126,10 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
   }
 
   app.put('/api/config', (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({ error: '生产环境不允许修改服务端模型配置，请使用请求级配置或部署环境变量' });
+      return;
+    }
     saveConfig(req.body as ApiConfig);
     res.json({ ok: true });
   });
@@ -134,6 +139,10 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
   });
 
   app.post('/api/configs', (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({ error: '生产环境不允许持久化服务端 API Key' });
+      return;
+    }
     const item = saveConfigItem(req.body as Partial<ApiConfigItem> & { id?: string });
     res.json(item);
   });
@@ -429,17 +438,15 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     const opts = req.body as LlmStreamOptions & { requestId?: string };
     const requestId = opts.requestId || uuidv4();
 
-    // 服务端配置优先：apiKey 始终从环境变量/服务端读取，前端不可覆盖
     const serverConfig = getConfig();
-    const clientConfig: ApiConfig = opts.config || { ...serverConfig };
-    const config = {
-      ...serverConfig,
-      ...clientConfig,
-      // apiKey 始终用服务端的，前端传来的忽略（安全）
-      apiKey: serverConfig.apiKey,
-      baseUrl: clientConfig.baseUrl || serverConfig.baseUrl,
-      model: clientConfig.model || serverConfig.model,
-    };
+    let config: ApiConfig;
+    try {
+      // 部署环境密钥优先；未配置时允许 BYOK，密钥仅用于本次 HTTPS 请求且不在服务端持久化。
+      config = resolveLlmConfig(serverConfig, opts.config);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+      return;
+    }
 
     console.log(`[LLM] 流式请求 ${requestId.slice(0, 8)}, model=${config.model}, baseUrl=${config.baseUrl}, hasKey=${!!config.apiKey}`);
 
@@ -564,14 +571,8 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
   app.post('/api/llm/json', async (req: Request, res: Response) => {
     const opts = req.body as LlmStreamOptions;
     const serverConfig = getConfig();
-    const config = {
-      ...serverConfig,
-      ...(opts.config || {}),
-      apiKey: serverConfig.apiKey,
-      baseUrl: opts.config?.baseUrl || serverConfig.baseUrl,
-      model: opts.config?.model || serverConfig.model,
-    };
     try {
+      const config = resolveLlmConfig(serverConfig, opts.config);
       const content = await chatJSON({
         config,
         messages: opts.messages,
@@ -581,7 +582,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
       });
       res.json({ ok: true, content });
     } catch (e) {
-      res.json({ ok: false, error: (e as Error).message });
+      res.status(400).json({ ok: false, error: (e as Error).message });
     }
   });
 

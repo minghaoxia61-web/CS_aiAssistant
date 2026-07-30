@@ -137,7 +137,7 @@ PDF/DOCX/PPTX 解析、文本分块、向量计算全部在 Web Worker 后台线
 
 ### 在线体验
 
-访问部署地址 → 设置页 → **一键加载示例数据** → 即可体验全部功能。
+访问 [cs-ai-assistant.vercel.app](https://cs-ai-assistant.vercel.app/) → 设置页 → **一键加载示例数据** → 即可体验全部功能。
 
 ### 本地开发
 
@@ -163,7 +163,18 @@ npm run start:web
 - **OpenAI**：`https://api.openai.com/v1`
 - **通义千问**：`https://dashscope.aliyuncs.com/compatible-mode/v1`
 
-在设置页添加配置，输入 API Key 即可。API Key 仅存储在浏览器本地，不经过服务端持久化。
+在设置页添加配置，输入 API Key 即可。部署环境配置的 `LLM_API_KEY` 优先；未配置时支持 BYOK，浏览器密钥只随当前 HTTPS 模型请求转发，不在服务端持久化。模型代理默认只允许受信任的公开提供商域名，额外域名需通过 `LLM_ALLOWED_HOSTS` 显式加入。
+
+### 可选账号与云同步
+
+项目默认保持本地优先，不配置云服务也可完整使用。需要跨设备同步时：
+
+1. 创建 Supabase 项目，在 SQL Editor 执行 `supabase/migrations/202607300001_learning_snapshots.sql`
+2. 启用 Email 登录
+3. 配置 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_PUBLISHABLE_KEY`
+4. 在个人信息页使用邮箱魔法链接登录，并手动同步学习快照
+
+数据库已启用 RLS，每位用户只能访问自己的学习快照。请勿在前端环境变量中使用 `service_role` key。
 
 ## 技术栈
 
@@ -177,6 +188,7 @@ npm run start:web
 | 向量检索 | @xenova/transformers (all-MiniLM-L6-v2) |
 | 文件解析 | pdfjs-dist + mammoth + JSZip |
 | 本地存储 | IndexedDB（原生 API 封装） |
+| 可选云同步 | Supabase Auth + PostgreSQL RLS |
 | 异步计算 | Web Worker + Worker 池 |
 | PWA | Service Worker + Web App Manifest |
 | 后端 | Express + Multer（纯 LLM 代理） |
@@ -215,7 +227,12 @@ src/
 2. 在 Railway 中创建新项目，连接 GitHub 仓库
 3. 构建命令：`npm run build:web`
 4. 启动命令：`npm run start:web`
-5. 添加环境变量（可选）：`PORT=3000`
+5. 添加环境变量：`NODE_ENV=production`、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`
+6. 如需允许额外的 OpenAI 兼容域名，配置逗号分隔的 `LLM_ALLOWED_HOSTS`
+
+### Vercel 前端部署
+
+仓库包含 `vercel.json`，连接 GitHub 后会自动构建 `vite build --mode web`。启用云同步时，同时在 Vercel 配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`。
 
 ### 本地 Electron 桌面应用
 

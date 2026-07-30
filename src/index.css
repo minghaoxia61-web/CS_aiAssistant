@@ -1500,11 +1500,14 @@ select {
     z-index: 60;
     width: 268px !important;
     transform: translateX(-105%);
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
     transition: transform 220ms ease;
   }
 
-  .app-sidebar.mobile-nav-open { transform: translateX(0); }
+  .app-sidebar.mobile-nav-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
   .app-sidebar h1,
   .app-sidebar h1 + div,
   .sidebar-section-label,

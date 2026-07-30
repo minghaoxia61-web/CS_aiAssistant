@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { User, Save, Check } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
+import CloudSyncCard from '@/components/CloudSyncCard'
 import { useStore } from '@/lib/store'
 
 export default function Profile() {
@@ -33,6 +34,7 @@ export default function Profile() {
         icon={<User className="w-5 h-5" />}
       />
       <div className="max-w-2xl mx-auto px-8 py-6 animate-fade-in">
+        <CloudSyncCard />
         <div className="panel p-6 space-y-6">
           {/* 昵称 */}
           <div>
@@ -120,7 +122,7 @@ export default function Profile() {
             <li>• 根据你的年级和学习目标，调整回答的深度和侧重点</li>
             <li>• 在薄弱方向上，AI 会给出更详细的基础解释和练习建议</li>
             <li>• 回答风格会影响 AI 的表达方式（简洁 vs 详细）</li>
-            <li>• 所有信息仅存储在本地，不会上传任何服务器</li>
+            <li>• 默认仅存储在本地；只有你登录并点击“同步现在”后，学习快照才会上传</li>
           </ul>
         </div>
       </div>
