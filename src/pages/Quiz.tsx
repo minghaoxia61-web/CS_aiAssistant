@@ -84,6 +84,19 @@ export default function Quiz() {
 
   // 从错题本跳转过来时，自动加载指定试卷进入作答
   const startSessionId = (location.state as { startSessionId?: string } | null)?.startSessionId
+  const adaptiveState = location.state as {
+    adaptiveChapters?: string[]
+    adaptiveDifficulty?: QuizDifficulty
+  } | null
+  useEffect(() => {
+    if (!adaptiveState?.adaptiveChapters?.length) return
+    setChapters(adaptiveState.adaptiveChapters)
+    if (adaptiveState.adaptiveDifficulty) setDifficulty(adaptiveState.adaptiveDifficulty)
+    setCount(5)
+    setTypes(new Set(['single', 'multiple']))
+    setRatios({ single: 60, multiple: 40 })
+    window.history.replaceState({}, '')
+  }, [adaptiveState?.adaptiveChapters?.join('|'), adaptiveState?.adaptiveDifficulty]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!startSessionId || history.length === 0) return
     const target = history.find((s) => s.id === startSessionId)

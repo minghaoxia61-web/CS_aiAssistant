@@ -357,20 +357,11 @@ export function retrieveChunks(
 /** 将检索到的分块组装成上下文文本 */
 export function chunksToContext(chunks: Chunk[]): string {
   if (chunks.length === 0) return ''
-  // 按资料分组
-  const byMaterial = new Map<string, { name: string; chunks: Chunk[] }>()
-  for (const c of chunks) {
-    if (!byMaterial.has(c.materialId)) {
-      byMaterial.set(c.materialId, { name: c.materialName, chunks: [] })
-    }
-    byMaterial.get(c.materialId)!.chunks.push(c)
-  }
-
-  const parts: string[] = []
-  for (const [, { name, chunks: cs }] of byMaterial) {
-    cs.sort((a, b) => a.index - b.index)
-    const text = cs.map((c) => c.text).join('\n\n')
-    parts.push(`=== 资料：${name} ===\n${text}`)
-  }
-  return parts.join('\n\n').trim()
+  return chunks
+    .map(
+      (chunk, index) =>
+        `=== [资料${index + 1}] ${chunk.materialName} · 片段 ${chunk.index + 1} ===\n${chunk.text}`,
+    )
+    .join('\n\n')
+    .trim()
 }

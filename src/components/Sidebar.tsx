@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
+  Beaker,
   LayoutDashboard,
   BookOpen,
   BookX,
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/quiz', label: '自我测验', description: '检验掌握程度', icon: ListChecks },
   { to: '/wrong-book', label: '错题本', description: '攻克薄弱环节', icon: BookX },
   { to: '/analytics', label: '学情分析', description: '查看学习趋势', icon: BarChart3 },
+  { to: '/learning-lab', label: '学习实验室', description: '评测、图谱与自适应', icon: Beaker },
 ]
 
 export default function Sidebar({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {

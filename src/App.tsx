@@ -14,6 +14,7 @@ const Quiz = lazy(() => import("@/pages/Quiz"));
 const WrongBook = lazy(() => import("@/pages/WrongBook"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Profile = lazy(() => import("@/pages/Profile"));
+const LearningLab = lazy(() => import("@/pages/LearningLab"));
 
 function PageLoader() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/quiz" element={withSuspense(Quiz)} />
           <Route path="/wrong-book" element={withSuspense(WrongBook)} />
           <Route path="/analytics" element={withSuspense(Analytics)} />
+          <Route path="/learning-lab" element={withSuspense(LearningLab)} />
           <Route path="/profile" element={withSuspense(Profile)} />
         </Route>
       </Routes>

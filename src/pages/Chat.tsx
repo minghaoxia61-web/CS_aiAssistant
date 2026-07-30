@@ -88,6 +88,20 @@ export default function Chat() {
   const selectedMaterials = readyMaterials.filter((m) => selectedMatIds.has(m.id))
   const estimatedTokens = estimateMaterialsTokens(selectedMaterials)
 
+  // 从知识地图进入时预填问题并自动选中对应课件
+  useEffect(() => {
+    const prefill = sessionStorage.getItem('cs_chat_prefill')
+    const materialId = sessionStorage.getItem('cs_chat_material_id')
+    if (prefill) {
+      setInput(prefill)
+      sessionStorage.removeItem('cs_chat_prefill')
+    }
+    if (materialId && readyMaterials.some((material) => material.id === materialId)) {
+      setSelectedMatIds(new Set([materialId]))
+      sessionStorage.removeItem('cs_chat_material_id')
+    }
+  }, [readyMaterials.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleMaterial = (id: string) => {
     setSelectedMatIds((prev) => {
       const next = new Set(prev)
@@ -401,6 +415,7 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
                         <span>{index + 1}</span>
                         <div>
                           <strong>{citation.materialName}</strong>
+                          <small>{citation.locator || (citation.chunkIndex !== undefined ? `片段 ${citation.chunkIndex + 1}` : '全文')}</small>
                           <p>{citation.excerpt || '已使用该资料生成回答。'}</p>
                         </div>
                       </div>

@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BookOpen,
   BookX,
+  Beaker,
   CalendarCheck2,
   Check,
   Flame,
@@ -203,6 +204,7 @@ export default function Dashboard() {
               <ActionRow icon={<BookX />} title="复习到期错题" desc={`${metrics.due.length} 道题已进入复习队列`} action="去复习" onClick={() => navigate('/wrong-book')} />
               <ActionRow icon={<MessageSquareText />} title="继续 AI 对话" desc={recentChat?.title || '基于课程资料提出一个问题'} action="继续" onClick={() => navigate('/chat')} />
               <ActionRow icon={<TrendingUp />} title="查看学习趋势" desc={latestQuiz ? `最近测验 ${latestQuiz.score}/${latestQuiz.total}` : '完成测验后生成掌握趋势'} action="查看" onClick={() => navigate('/analytics')} />
+              <ActionRow icon={<Beaker />} title="打开学习实验室" desc="评测检索质量，查看知识地图与自适应计划" action="分析" onClick={() => navigate('/learning-lab')} />
             </div>
           </section>
 

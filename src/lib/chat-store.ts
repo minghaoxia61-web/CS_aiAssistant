@@ -262,9 +262,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           .map((m) => `=== 资料：${m.filename} ===\n${m.text_content || ''}`)
           .join('\n\n')
           .trim()
-        citations = ctxMaterials.slice(0, 6).map((material) => ({
+        citations = ctxMaterials.slice(0, 6).map((material, index) => ({
           materialId: material.id,
           materialName: material.filename,
+          rank: index + 1,
+          locator: '全文',
           excerpt: (material.text_content || '').replace(/\s+/g, ' ').slice(0, 180),
         }))
       } else if (ctxMaterials.length >= MAPREDUCE_THRESHOLD) {
@@ -281,6 +283,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           materialId: material.id,
           materialName: material.filename,
           chunkIndex: index,
+          rank: index + 1,
+          locator: '压缩摘要',
           excerpt: summaries[index]?.replace(/\s+/g, ' ').slice(0, 180) || '',
         }))
       } else {
@@ -304,10 +308,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           queryVector || undefined,
         )
         context = chunksToContext(retrieved)
-        citations = retrieved.map((chunk) => ({
+        citations = retrieved.map((chunk, index) => ({
           materialId: chunk.materialId,
           materialName: chunk.materialName,
           chunkIndex: chunk.index,
+          rank: index + 1,
+          locator: `片段 ${chunk.index + 1}`,
           excerpt: chunk.text.replace(/\s+/g, ' ').slice(0, 180),
         }))
       }
@@ -319,7 +325,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       : ''
 
     const systemContent = context
-      ? `${buildChatSystemPrompt(profile)}\n\n以下是用户提供的课程资料（来自多份文件），请综合参考所有资料内容回答，不要只关注第一份：\n${context}${localOnlySuffix}`
+      ? `${buildChatSystemPrompt(profile)}\n\n以下是用户提供的课程资料。请优先依据资料回答；涉及资料事实时使用 [资料1]、[资料2] 的格式标注依据。若资料不足以回答，请明确说明“当前资料中没有足够依据”，不要编造。\n${context}${localOnlySuffix}`
       : buildChatSystemPrompt(profile) + (get().localOnly ? '\n\n⚠️ 用户已开启「仅使用本地资料」模式，但当前未提供任何资料。请告知用户需要先上传资料。' : '')
 
     // 多轮对话自动摘要：超过 6 轮时压缩早期问答

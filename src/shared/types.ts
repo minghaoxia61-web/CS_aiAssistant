@@ -58,6 +58,10 @@ export interface ChatCitation {
   materialName: string;
   chunkIndex?: number;
   excerpt: string;
+  /** 在本次召回结果中的顺序，用于回答与证据一一对应 */
+  rank?: number;
+  /** 可读定位信息；解析器无法提供页码时使用片段编号 */
+  locator?: string;
 }
 
 export interface ChatSession {
