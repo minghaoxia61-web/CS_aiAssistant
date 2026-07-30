@@ -5,6 +5,7 @@ import Dialog from "@/components/Dialog";
 
 // 路由级懒加载：每个页面拆为独立 chunk，首屏只加载当前路由
 const Knowledge = lazy(() => import("@/pages/Knowledge"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Setup = lazy(() => import("@/pages/Setup"));
 const Library = lazy(() => import("@/pages/Library"));
 const Chat = lazy(() => import("@/pages/Chat"));
@@ -32,11 +33,12 @@ function withSuspense(Comp: React.ComponentType) {
 
 export default function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Dialog />
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/knowledge" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={withSuspense(Dashboard)} />
           <Route path="/knowledge" element={withSuspense(Knowledge)} />
           <Route path="/setup" element={withSuspense(Setup)} />
           <Route path="/library" element={withSuspense(Library)} />

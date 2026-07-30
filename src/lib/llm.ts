@@ -17,7 +17,6 @@ export async function streamChat(opts: StreamChatOptions): Promise<string> {
   const requestId = await window.api.llmStream({ config, messages, temperature, maxTokens })
 
   return new Promise<string>((resolve, reject) => {
-    let full = ''
     let settled = false
 
     const cleanup = () => {
@@ -28,7 +27,6 @@ export async function streamChat(opts: StreamChatOptions): Promise<string> {
 
     const offToken = window.api.onLlmToken((payload) => {
       if (payload.requestId !== requestId || settled) return
-      full += payload.token
       onToken(payload.token)
     })
 

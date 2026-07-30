@@ -12,8 +12,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-markdown': ['react-markdown', 'remark-gfm', 'remark-math', 'rehype-highlight', 'rehype-katex'],
-          'vendor-katex': ['katex'],
+          'vendor-markdown-core': ['react-markdown', 'remark-gfm', 'remark-math'],
+          'vendor-highlight': ['rehype-highlight'],
+          'vendor-katex-render': ['rehype-katex'],
         },
       },
     },
@@ -36,9 +37,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       babel: {
-        plugins: [
-          'react-dev-locator',
-        ],
+        plugins: mode === 'development' ? ['react-dev-locator'] : [],
       },
     }),
     tsconfigPaths()

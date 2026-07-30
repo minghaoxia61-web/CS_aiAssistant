@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookX, Trash2, Check, X, ChevronDown, ChevronRight, Sparkles, Plus, Filter, CheckCircle2, Circle, Loader2, BookMarked, Bug, Zap, Gauge } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
+import SpacedReviewQueue from '@/components/review/SpacedReviewQueue'
 import { useStore } from '@/lib/store'
 import { confirmDialog } from '@/lib/dialog'
 import { formatTime, cn } from '@/lib/utils'
@@ -184,6 +185,7 @@ export default function WrongBook() {
       />
 
       <div className="flex-1 overflow-y-auto px-8 py-6">
+        <SpacedReviewQueue questions={wrongQuestions} onUpdated={refresh} />
         {/* 统计概览 */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="panel card-3d p-4">

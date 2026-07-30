@@ -88,7 +88,7 @@ export async function ensureSubjectVectors(
     }
   }
 
-  let vectors = await loadSubjectVectors(subjectId)
+  const vectors = await loadSubjectVectors(subjectId)
   const missing = chunks.filter((c) => !vectors.has(chunkKey(c.materialId, c.index)))
   if (missing.length === 0) return vectors
 

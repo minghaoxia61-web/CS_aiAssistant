@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 
 type DialogType = 'confirm' | 'prompt' | null
+type DialogResult = boolean | string | null
 
 interface DialogState {
   type: DialogType
@@ -13,11 +14,11 @@ interface DialogState {
   cancelText: string
   danger?: boolean
   // 内部 resolve
-  _resolve?: (value: any) => void
+  _resolve?: (value: DialogResult) => void
   inputValue: string
 
-  open: (opts: Partial<Omit<DialogState, 'type' | '_resolve' | 'inputValue' | 'open' | 'close' | 'setInput'>> & { type: 'confirm' | 'prompt' }) => Promise<any>
-  close: (result: any) => void
+  open: (opts: Partial<Omit<DialogState, 'type' | '_resolve' | 'inputValue' | 'open' | 'close' | 'setInput'>> & { type: 'confirm' | 'prompt' }) => Promise<DialogResult>
+  close: (result: DialogResult) => void
   setInput: (v: string) => void
 }
 
@@ -80,5 +81,5 @@ export function promptDialog(message: string, opts?: { title?: string; defaultVa
     defaultValue: opts?.defaultValue,
     placeholder: opts?.placeholder,
     confirmText: opts?.confirmText ?? '确定',
-  }).then((v) => (v === undefined ? null : v))
+  }).then((value) => typeof value === 'string' ? value : null)
 }

@@ -8,9 +8,16 @@ import { registerRoutes } from './routes';
 import { seedKnowledgeBase } from './knowledge/seed';
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 10,
+  },
+});
 
-app.use(express.json({ limit: '50mb' }));
+app.disable('x-powered-by');
+app.use(express.json({ limit: '12mb' }));
 
 // 注册 API 路由
 registerRoutes(app, upload);

@@ -17,24 +17,21 @@ const DEFAULT_CONFIG: ApiConfig = {
 const LS_KEY = 'cs-ai-tutor-preview'
 
 // ---------- 延迟代理：在 createDbApi() 异步初始化完成前排队的调用 ----------
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let realApi: ElectronAPI | null = null
 const pendingCalls: Array<() => void> = []
+type LazyApiMethod = (...args: unknown[]) => unknown
 
 function makeLazyApi(): ElectronAPI {
   // 用 Proxy 拦截所有方法调用，realApi 就绪前排队，就绪后直接转发
   return new Proxy({} as ElectronAPI, {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get(_target, prop: string) {
-      if (realApi) return (realApi as any)[prop]
+      if (realApi) return (realApi as unknown as Record<string, LazyApiMethod>)[prop]
       // on* 方法返回同步退订函数，需特殊处理
       if (prop.startsWith('on')) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (cb: any) => {
+        return (cb: unknown) => {
           let realUnsub: (() => void) | null = null
           pendingCalls.push(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            realUnsub = (realApi as any)[prop](cb)
+            realUnsub = (realApi as unknown as Record<string, LazyApiMethod>)[prop](cb) as () => void
           })
           return () => {
             if (realUnsub) realUnsub()
@@ -42,13 +39,12 @@ function makeLazyApi(): ElectronAPI {
         }
       }
       // 其余方法返回 Promise，等 realApi 就绪后执行
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (...args: any[]) => {
+      return (...args: unknown[]) => {
         return new Promise((resolve, reject) => {
           pendingCalls.push(() => {
             try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              Promise.resolve((realApi as any)[prop](...args)).then(resolve, reject)
+              const method = (realApi as unknown as Record<string, LazyApiMethod>)[prop]
+              Promise.resolve(method(...args)).then(resolve, reject)
             } catch (e) {
               reject(e)
             }
@@ -148,6 +144,7 @@ export function installMockIfNeeded() {
       return true
     },
     async setActiveConfig(id) {
+      void id
       return loadState().config
     },
     async listSubjects() {
@@ -317,7 +314,8 @@ export function installMockIfNeeded() {
       window.addEventListener('mock-llm-done', handler)
       return () => window.removeEventListener('mock-llm-done', handler)
     },
-    onLlmError(_cb: (payload: LlmErrorEvent) => void) {
+    onLlmError(cb: (payload: LlmErrorEvent) => void) {
+      void cb
       return () => {}
     },
     // 错题本 mock（浏览器预览模式不可用）

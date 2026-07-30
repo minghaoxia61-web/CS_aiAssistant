@@ -108,7 +108,7 @@ export function streamChat(
   const body = buildBody({ ...opts, stream: true });
   let buffer = '';
   let full = '';
-  let aborted = false;
+  const aborted = false;
 
   return createRequest(
     opts.config,

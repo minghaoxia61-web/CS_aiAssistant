@@ -1,5 +1,5 @@
 // Express API 路由（映射 electron/ipc.ts 的所有 IPC 通道为 HTTP 端点）
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response } from 'express';
 import type { ServerResponse } from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -64,8 +64,34 @@ function broadcastSSE(event: string, data: Record<string, unknown>): void {
 
 // ---------- LLM 流式请求管理（abort） ----------
 const activeStreams = new Map<string, { abort: () => void }>();
+const llmRateLimits = new Map<string, { count: number; resetAt: number }>();
+const ALLOWED_UPLOADS = new Set(['pdf', 'docx', 'pptx', 'txt', 'md']);
 
 export function registerRoutes(app: Express, upload: multer.Multer): void {
+  // 基础安全边界：匿名用户标识校验、LLM 接口限流与安全响应头
+  app.use((req: Request, res: Response, next: () => void) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'same-origin');
+    const userId = String(req.headers['x-user-id'] || '');
+    if (userId && !/^[a-zA-Z0-9_-]{8,80}$/.test(userId)) {
+      res.status(400).json({ error: '无效的用户标识' });
+      return;
+    }
+    if (req.path.startsWith('/api/llm/')) {
+      const key = userId || req.ip || 'anonymous';
+      const now = Date.now();
+      const current = llmRateLimits.get(key);
+      const bucket = !current || current.resetAt <= now ? { count: 0, resetAt: now + 60_000 } : current;
+      bucket.count += 1;
+      llmRateLimits.set(key, bucket);
+      res.setHeader('X-RateLimit-Remaining', String(Math.max(0, 30 - bucket.count)));
+      if (bucket.count > 30) {
+        res.status(429).json({ error: '请求过于频繁，请稍后再试' });
+        return;
+      }
+    }
+    next();
+  });
   // ---------- 用户隔离中间件 ----------
   // 从 X-User-Id 头获取用户 ID，用 AsyncLocalStorage 隔离每个用户的数据
   app.use((req: Request, _res: Response, next: () => void) => {
@@ -85,18 +111,18 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     res.json({ ...cfg, apiKey: '' });
   });
 
-  // 调试端点：返回服务端实际使用的配置（apiKey 脱敏），用于排查 401
-  app.get('/api/config/debug', (_req: Request, res: Response) => {
-    const cfg = getConfig();
-    const key = cfg.apiKey || '';
-    res.json({
-      baseUrl: cfg.baseUrl,
-      model: cfg.model,
-      apiKeySuffix: key ? `****${key.slice(-4)}` : '(空)',
-      apiKeySource: process.env.LLM_API_KEY ? 'env:LLM_API_KEY' : 'config.json',
-      hasKey: !!key,
+  // 配置诊断只在开发环境开放，避免生产环境泄露服务端配置细节
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/config/debug', (_req: Request, res: Response) => {
+      const cfg = getConfig();
+      res.json({
+        baseUrl: cfg.baseUrl,
+        model: cfg.model,
+        apiKeySource: process.env.LLM_API_KEY ? 'env:LLM_API_KEY' : 'config.json',
+        hasKey: Boolean(cfg.apiKey),
+      });
     });
-  });
+  }
 
   app.put('/api/config', (req: Request, res: Response) => {
     saveConfig(req.body as ApiConfig);
@@ -167,6 +193,10 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
         res.json([]);
         return;
       }
+      if (files.some((file) => !ALLOWED_UPLOADS.has(getFileType(file.originalname)))) {
+        res.status(415).json({ error: '包含不支持的文件格式' });
+        return;
+      }
 
       // 先创建 parsing 状态记录并立即返回
       const created: Material[] = files.map((f) => {
@@ -199,7 +229,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
             status: 'ready',
             filetype: result.filetype,
           });
-        } catch (err) {
+        } catch {
           store.updateMaterial(m.id, { status: 'failed' });
           broadcastSSE('material:updated', { id: m.id, status: 'failed' });
         }
@@ -229,6 +259,10 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         res.json([]);
+        return;
+      }
+      if (files.some((file) => !ALLOWED_UPLOADS.has(getFileType(file.originalname)))) {
+        res.status(415).json({ error: '包含不支持的文件格式' });
         return;
       }
       const apiConfig = getConfig();

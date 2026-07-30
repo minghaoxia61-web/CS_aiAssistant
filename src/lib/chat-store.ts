@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { streamChat, buildChatSystemPrompt, estimateMaterialsTokens, summarizeMaterial } from '@/lib/llm'
 import { chunkMaterials, retrieveChunks, chunksToContext, type Chunk } from '@/lib/rag'
 import { ensureSubjectVectors, loadSubjectVectors, embedQuery } from '@/lib/vector'
-import type { ApiConfig, ChatSession, ChatMessage, Material, UserProfile } from '@/shared/types'
+import type { ApiConfig, ChatSession, ChatMessage, ChatCitation, Material, UserProfile } from '@/shared/types'
 
 /** 持久化索引文件结构（与 electron/store.ts SubjectIndexData 对应） */
 interface SubjectIndexData {
@@ -91,6 +91,7 @@ interface ChatState {
   newSession: (subjectId: string) => ChatSession
   clearError: () => void
   setLocalOnly: (v: boolean) => void
+  setMessageFeedback: (messageId: string, feedback: 'helpful' | 'incorrect') => Promise<void>
 }
 
 let abortController: AbortController | null = null
@@ -249,6 +250,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     abortController = new AbortController()
     const ctxMaterials = readyMaterials.filter((m) => selectedMatIds.has(m.id))
     let context = ''
+    let citations: ChatCitation[] = []
     if (ctxMaterials.length > 0) {
       const totalTokens = estimateMaterialsTokens(ctxMaterials)
       const RAG_BUDGET = 30000 // GLM-4-Flash 支持 128k 上下文，30k 足够且留有余量
@@ -260,6 +262,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           .map((m) => `=== 资料：${m.filename} ===\n${m.text_content || ''}`)
           .join('\n\n')
           .trim()
+        citations = ctxMaterials.slice(0, 6).map((material) => ({
+          materialId: material.id,
+          materialName: material.filename,
+          excerpt: (material.text_content || '').replace(/\s+/g, ' ').slice(0, 180),
+        }))
       } else if (ctxMaterials.length >= MAPREDUCE_THRESHOLD) {
         // 资料多且份数多（≥5）：Map-Reduce 逐份压缩再合并
         // 复用复习资料生成的压缩逻辑，保留每份资料的核心知识点，避免 RAG 只取 top-K 片段导致跨资料内容遗漏
@@ -270,6 +277,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           summaries.push(`=== 资料：${ctxMaterials[i].filename}（摘要）===\n${summary}`)
         }
         context = summaries.join('\n\n').trim()
+        citations = ctxMaterials.slice(0, 6).map((material, index) => ({
+          materialId: material.id,
+          materialName: material.filename,
+          chunkIndex: index,
+          excerpt: summaries[index]?.replace(/\s+/g, ' ').slice(0, 180) || '',
+        }))
       } else {
         // 资料多但份数少（<5）：RAG 检索最相关片段（BM25 + 向量语义混合召回）
         // 使用持久化缓存：首次分块后落盘，重启/重复提问不重算
@@ -291,6 +304,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           queryVector || undefined,
         )
         context = chunksToContext(retrieved)
+        citations = retrieved.map((chunk) => ({
+          materialId: chunk.materialId,
+          materialName: chunk.materialName,
+          chunkIndex: chunk.index,
+          excerpt: chunk.text.replace(/\s+/g, ' ').slice(0, 180),
+        }))
       }
     }
 
@@ -350,7 +369,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       })
       const finalMessages = updatedMessages.map((m) =>
-        m.id === assistantMsg.id ? { ...m, content: acc } : m
+        m.id === assistantMsg.id ? { ...m, content: acc, citations } : m
       )
       const finalSession = { ...updated, messages: finalMessages }
       set({ currentSession: finalSession, streaming: false, streamPhase: 'idle' })
@@ -396,4 +415,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearError: () => set({ error: '' }),
   setLocalOnly: (v) => set({ localOnly: v }),
+  setMessageFeedback: async (messageId, feedback) => {
+    const session = get().currentSession
+    if (!session) return
+    const messages = session.messages.map((message) =>
+      message.id === messageId ? { ...message, feedback } : message,
+    )
+    const updated = { ...session, messages }
+    set({ currentSession: updated })
+    await saveWithRetry(updated)
+  },
 }))

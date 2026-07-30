@@ -297,10 +297,6 @@ interface ChunkFile {
   updated_at: number;
 }
 
-function getChunksPath(materialId: string): string {
-  return path.join(ctx().chunksDir, `${materialId}.json`);
-}
-
 function writeMaterialText(c: UserContext, materialId: string, text: string): void {
   c.textCache.set(materialId, text);
   writeJSON(path.join(c.chunksDir, `${materialId}.json`), {

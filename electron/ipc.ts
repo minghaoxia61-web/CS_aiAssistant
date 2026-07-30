@@ -5,7 +5,7 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { IPC, type ApiConfig, type ApiConfigItem, type Material, type FileFilter, type LlmStreamOptions, type UserProfile, type TaskProgress, type WrongQuestion } from '../src/shared/types';
 import * as store from './store';
-import { getConfig, saveConfig, listConfigs, saveConfigItem, deleteConfigItem, setActiveConfig, getActiveConfigId } from './config';
+import { getConfig, saveConfig, listConfigs, saveConfigItem, deleteConfigItem, setActiveConfig } from './config';
 import { parseFile, getFileType } from './parsers';
 import { streamChat, chatJSON } from './llm';
 import * as taskQueue from './task-queue';
@@ -100,7 +100,7 @@ export function registerIpc(): void {
             status: 'ready',
             filetype: result.filetype,
           });
-        } catch (err) {
+        } catch {
           store.updateMaterial(m.id, { status: 'failed' });
           emit('material:updated', { id: m.id, status: 'failed' });
         }

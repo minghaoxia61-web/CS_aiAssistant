@@ -2,7 +2,7 @@
 // 使用全局 chat-store，切换页面不丢失正在生成的回复
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessagesSquare, Plus, Send, Square, FileText, History, Paperclip, Trash2, Copy, Check } from 'lucide-react'
+import { MessagesSquare, Plus, Send, Square, FileText, History, Paperclip, Trash2, Copy, Check, ThumbsUp, ThumbsDown, BookOpenCheck, ChevronDown } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
@@ -12,7 +12,7 @@ import { confirmDialog } from '@/lib/dialog'
 import { estimateMaterialsTokens } from '@/lib/llm'
 import { onModelStatusChange, type ModelStatus } from '@/lib/vector'
 import { cn } from '@/lib/utils'
-import type { Material } from '@/shared/types'
+import type { ChatMessage, Material } from '@/shared/types'
 
 const QUICK_CMDS = [
   '总结这章的核心知识点',
@@ -149,7 +149,7 @@ export default function Chat() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧：会话 + 上下文 */}
-        <div className="w-[260px] shrink-0 border-r border-[var(--border)] flex flex-col glass-sidebar">
+        <div className="chat-context-panel w-[260px] shrink-0 border-r border-[var(--border)] flex flex-col glass-sidebar">
           {/* 会话历史 */}
           <div className="flex-1 overflow-y-auto px-3 py-4 min-h-0">
             <div className="flex items-center gap-2 px-2 mb-2 text-bone-muted">
@@ -341,12 +341,13 @@ export default function Chat() {
   )
 }
 
-function MessageBubble({ message, streaming }: { message: { id: string; role: string; content: string }; streaming: boolean }) {
+function MessageBubble({ message, streaming }: { message: ChatMessage; streaming: boolean }) {
   const isUser = message.role === 'user'
   const isEmpty = !message.content && !isUser
   const [copied, setCopied] = useState(false)
-  const [showActions, setShowActions] = useState(false)
+  const [showSources, setShowSources] = useState(false)
   const navigate = useNavigate()
+  const setMessageFeedback = useChatStore((state) => state.setMessageFeedback)
 
   const copyContent = () => {
     navigator.clipboard.writeText(message.content)
@@ -363,13 +364,6 @@ function MessageBubble({ message, streaming }: { message: { id: string; role: st
     sessionStorage.setItem('ai_content_for_quiz', message.content)
     navigate('/quiz')
   }
-  const copyConcise = () => {
-    navigator.clipboard.writeText(message.content)
-    // 触发一个精简请求
-    sessionStorage.setItem('ai_content_concise', message.content)
-    navigate('/chat')
-  }
-
   return (
     <div className={cn('flex gap-3 animate-slide-up', isUser && 'flex-row-reverse')}>
       <div
@@ -393,6 +387,47 @@ function MessageBubble({ message, streaming }: { message: { id: string; role: st
         ) : (
           <>
             <Markdown content={message.content} className={streaming ? 'stream-cursor' : ''} streaming={streaming} />
+            {!streaming && message.citations && message.citations.length > 0 && (
+              <div className="citation-panel">
+                <button className="citation-toggle" onClick={() => setShowSources((value) => !value)}>
+                  <BookOpenCheck className="w-3.5 h-3.5" />
+                  <span>{message.citations.length} 条资料依据</span>
+                  <ChevronDown className={cn('w-3.5 h-3.5 ml-auto transition-transform', showSources && 'rotate-180')} />
+                </button>
+                {showSources && (
+                  <div className="citation-list">
+                    {message.citations.map((citation, index) => (
+                      <div className="citation-item" key={`${citation.materialId}-${citation.chunkIndex ?? index}`}>
+                        <span>{index + 1}</span>
+                        <div>
+                          <strong>{citation.materialName}</strong>
+                          <p>{citation.excerpt || '已使用该资料生成回答。'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {!streaming && message.content && (
+              <div className="answer-feedback">
+                <span>这个回答有帮助吗？</span>
+                <button
+                  className={cn(message.feedback === 'helpful' && 'active')}
+                  onClick={() => setMessageFeedback(message.id, 'helpful')}
+                  title="有帮助"
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  className={cn(message.feedback === 'incorrect' && 'active-negative')}
+                  onClick={() => setMessageFeedback(message.id, 'incorrect')}
+                  title="不准确"
+                >
+                  <ThumbsDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             {!streaming && message.content && (
               <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button

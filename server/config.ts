@@ -7,12 +7,9 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { ApiConfig, ApiConfigItem } from '../src/shared/types';
 
-// 内置默认 API Key（大赛演示用，生产环境请用 LLM_API_KEY 环境变量覆盖）
-const BUILTIN_API_KEY = 'sk-b88d255ffc094a7898ab9c48c078bb0d';
-
 const DEFAULT_CONFIG: ApiConfig = {
   baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
-  apiKey: process.env.LLM_API_KEY || BUILTIN_API_KEY,
+  apiKey: process.env.LLM_API_KEY || '',
   model: process.env.LLM_MODEL || 'deepseek-v4-flash',
   temperature: 0.7,
   maxTokens: 0,
@@ -76,12 +73,10 @@ export function getConfig(): ApiConfig {
   if (!rest.baseUrl || !rest.baseUrl.includes('deepseek.com')) {
     return { ...DEFAULT_CONFIG };
   }
-  // 强制使用正确的 model 和 apiKey，防止 config.json 缓存了旧值
+  // 环境变量优先；未配置时保留用户在设置页保存的配置
   return {
     ...DEFAULT_CONFIG,
     ...rest,
-    model: 'deepseek-v4-flash',
-    apiKey: DEFAULT_CONFIG.apiKey,
   };
 }
 

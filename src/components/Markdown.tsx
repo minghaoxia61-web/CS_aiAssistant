@@ -14,7 +14,7 @@ function loadMermaid() {
   if (!mermaidPromise) {
     mermaidPromise = import('mermaid').then((m) => {
       const mermaid = m.default
-      mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'inherit' })
+      mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict', fontFamily: 'inherit' })
       return mermaid
     })
   }
@@ -112,22 +112,47 @@ function CodeBlockWrapper({ code, lang, children }: { code: string; lang: string
   const runnable = ['javascript', 'js', 'typescript', 'ts'].includes(lang)
 
   const run = () => {
-    const logs: string[] = []
-    const fakeConsole = {
-      log: (...args: unknown[]) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
-      error: (...args: unknown[]) => logs.push(args.map(String).join(' ')),
-      warn: (...args: unknown[]) => logs.push(args.map(String).join(' ')),
-      info: (...args: unknown[]) => logs.push(args.map(String).join(' ')),
+    setOutput(null)
+    const runId = `code-${crypto.randomUUID()}`
+    const frame = document.createElement('iframe')
+    frame.setAttribute('sandbox', 'allow-scripts')
+    frame.setAttribute('aria-hidden', 'true')
+    frame.style.display = 'none'
+    const safeCode = JSON.stringify(code).replace(/</g, '\\u003c')
+    frame.srcdoc = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'">
+      <script>
+        const logs = [];
+        const console = {
+          log: (...args) => logs.push(args.map(v => typeof v === 'object' ? JSON.stringify(v) : String(v)).join(' ')),
+          error: (...args) => logs.push(args.map(String).join(' ')),
+          warn: (...args) => logs.push(args.map(String).join(' ')),
+          info: (...args) => logs.push(args.map(String).join(' '))
+        };
+        try {
+          const result = new Function('console', ${safeCode})(console);
+          if (result !== undefined) logs.push(String(result));
+          parent.postMessage({ source: 'cs-code-runner', id: '${runId}', ok: true, text: logs.join('\\n') || '（执行完成，无输出）' }, '*');
+        } catch (error) {
+          parent.postMessage({ source: 'cs-code-runner', id: '${runId}', ok: false, text: error.name + ': ' + error.message }, '*');
+        }
+      </script>`
+    const cleanup = () => {
+      window.removeEventListener('message', handleMessage)
+      frame.remove()
     }
-    try {
-      // 沙箱执行：用 new Function 隔离作用域，捕获 console 输出
-      const fn = new Function('console', code)
-      const result = fn(fakeConsole)
-      if (result !== undefined) logs.push(String(result))
-      setOutput({ ok: true, text: logs.join('\n') || '（执行完成，无输出）' })
-    } catch (e) {
-      setOutput({ ok: false, text: `${(e as Error).name}: ${(e as Error).message}` })
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== frame.contentWindow || event.data?.source !== 'cs-code-runner' || event.data?.id !== runId) return
+      setOutput({ ok: Boolean(event.data.ok), text: String(event.data.text || '') })
+      cleanup()
     }
+    window.addEventListener('message', handleMessage)
+    document.body.appendChild(frame)
+    setTimeout(() => {
+      if (frame.isConnected) {
+        setOutput({ ok: false, text: '执行超时：代码运行超过 2 秒。' })
+        cleanup()
+      }
+    }, 2000)
   }
 
   return (
@@ -164,7 +189,7 @@ export default function Markdown({ content, className, streaming }: MarkdownProp
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }], rehypeKatex]}
         components={{
-          a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
+          a: (props) => <a {...props} target="_blank" rel="noreferrer" />,
           pre: ({ children }) => {
             const codeEl = children as ReactElement
             const className = (codeEl?.props?.className as string) || ''

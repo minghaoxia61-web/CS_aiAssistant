@@ -277,7 +277,6 @@ export default function Quiz() {
     setAnswers((prev) => ({ ...prev, [qid]: val }))
   }
 
-  const allAnswered = questions.every((q) => (answers[q.id] || '').trim() !== '')
   const unansweredCount = questions.filter((q) => !(answers[q.id] || '').trim()).length
 
   const submit = async (auto = false) => {
@@ -1294,7 +1293,7 @@ function buildPrintHTML(s: QuizSession): string {
     <span class="score-box">得分：<b>${s.score}</b> / ${s.total}</span>
     <span class="score-box">正确率：<b>${pct}%</b></span>
     <span>生成时间：${new Date(s.created_at).toLocaleString('zh-CN')}</span>
-    ${s.attempts ? `<span>　作答次数：${s.attempts}</span>` : ''}
+    ${s.attempts ? `<span>&emsp;作答次数：${s.attempts}</span>` : ''}
   </div>
   ${questionsHtml}
 </body>

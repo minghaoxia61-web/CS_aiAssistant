@@ -16,6 +16,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "check": "tsc -b --noEmit",
+    "test": "tsx --test tests/spaced-repetition.test.ts tests/rag.test.ts",
     "package": "npm run build && electron-builder --win",
     "package:portable": "npm run build && electron-builder --win portable"
   },

@@ -47,6 +47,17 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: number;
+  /** RAG 检索证据，用于回答溯源 */
+  citations?: ChatCitation[];
+  /** 用户对回答质量的反馈 */
+  feedback?: 'helpful' | 'incorrect';
+}
+
+export interface ChatCitation {
+  materialId: string;
+  materialName: string;
+  chunkIndex?: number;
+  excerpt: string;
 }
 
 export interface ChatSession {
@@ -159,6 +170,19 @@ export interface WrongQuestion {
   review_count: number;
   /** 难度（用于筛选，手动录入或从测验中继承） */
   difficulty?: QuizDifficulty;
+  /** 间隔重复调度信息 */
+  review_schedule?: ReviewSchedule;
+}
+
+export type ReviewRating = 'again' | 'hard' | 'good' | 'easy';
+
+export interface ReviewSchedule {
+  dueAt: number;
+  intervalDays: number;
+  ease: number;
+  repetitions: number;
+  lastReviewedAt?: number;
+  lastRating?: ReviewRating;
 }
 
 export interface FileFilter {

@@ -1,7 +1,7 @@
 // 复习中心页：生成总结 / 大纲 / 速记卡
 // 生成状态提升到全局 store，切换页面不打断生成
 import { useEffect, useState, useCallback } from 'react'
-import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Download, RefreshCw, Network } from 'lucide-react'
+import { BookOpen, Sparkles, FileText, ListTree, Layers, Trash2, Copy, Check, Network } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
@@ -22,7 +22,7 @@ export default function Review() {
   const { subjects, currentSubjectId, config } = useStore()
   const {
     generating, generatingType, streamText, currentDoc, flashcards, error,
-    generate, openDoc, clearError, resetView,
+    generate, openDoc, resetView,
   } = useReviewStore()
 
   const [materials, setMaterials] = useState<Material[]>([])

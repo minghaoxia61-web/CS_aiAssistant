@@ -41,8 +41,8 @@ interface QueuedTask {
 
 // ---------- Worker 池 ----------
 const MAX_WORKERS = Math.min((navigator.hardwareConcurrency || 4) - 1, 2) || 1
-let workers: Worker[] = []
-let workerBusy: boolean[] = []
+const workers: Worker[] = []
+const workerBusy: boolean[] = []
 const taskQueue: QueuedTask[] = []
 const activeTasks = new Map<string, QueuedTask>()
 let initialized = false

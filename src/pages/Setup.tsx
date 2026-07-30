@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { getStorageStats, type StorageStats } from '@/lib/db'
 import { loadDemoData, isDemoLoaded, type DemoProgress } from '@/lib/demo-data'
 import type { ApiConfig, ApiConfigItem } from '@/shared/types'
+import DataBackup from '@/components/DataBackup'
 
 const PRESETS: { name: string; baseUrl: string; model: string }[] = [
   { name: '智谱 GLM（免费）', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash-250414' },
@@ -328,6 +329,8 @@ export default function Setup() {
             <p className="text-sm text-bone-muted mt-1">接入你自己的大模型 API，支持配置多个并随时切换</p>
           </div>
         </div>
+
+        <DataBackup />
 
         {/* 配置列表 */}
         <div className="mb-6">

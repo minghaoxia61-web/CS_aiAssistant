@@ -15,7 +15,7 @@ import type {
   TaskProgress,
 } from '@/shared/types'
 import { createHttpApi } from './api-http'
-import { submitParseTask, cancelAllTasks } from './worker-pool'
+import { submitParseTask } from './worker-pool'
 import {
   openDB,
   put,
