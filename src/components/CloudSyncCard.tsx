@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Check, Cloud, CloudDownload, CloudUpload, Loader2, LogOut, Mail } from 'lucide-react'
+import { Check, Cloud, CloudDownload, CloudUpload, History, Loader2, LogOut, Mail, RefreshCw } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import {
   downloadCloudSnapshot,
   getCloudSession,
   isCloudSyncConfigured,
+  listCloudVersions,
   onCloudAuthChange,
   sendCloudMagicLink,
   signOutCloud,
   uploadCloudSnapshot,
+  type CloudSnapshotVersion,
 } from '@/lib/cloud-sync'
+import { DATA_CHANGED_EVENT } from '@/lib/data-events'
 import { createLearningBackup, restoreLearningBackup } from '@/lib/data-backup'
 import { confirmDialog } from '@/lib/dialog'
 import { useStore } from '@/lib/store'
@@ -27,12 +30,51 @@ export default function CloudSyncCard() {
   const [busy, setBusy] = useState<'login' | 'upload' | 'download' | 'logout' | null>(null)
   const [message, setMessage] = useState('')
   const [lastSync, setLastSync] = useState(() => Number(localStorage.getItem('cs_cloud_last_sync') || 0))
+  const [autoSync, setAutoSync] = useState(() => localStorage.getItem('cs_cloud_auto_sync') === 'true')
+  const [versions, setVersions] = useState<CloudSnapshotVersion[]>([])
+  const [showVersions, setShowVersions] = useState(false)
 
   useEffect(() => {
     if (!configured) return
     getCloudSession().then(setSession).catch((error) => setMessage((error as Error).message))
     return onCloudAuthChange(setSession)
   }, [configured])
+
+  useEffect(() => {
+    if (!session) {
+      setVersions([])
+      return
+    }
+    listCloudVersions().then(setVersions).catch(() => setVersions([]))
+  }, [session, lastSync])
+
+  useEffect(() => {
+    if (!session || !autoSync) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const sync = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(async () => {
+        try {
+          const remote = await downloadCloudSnapshot()
+          if (remote && (!lastSync || remote.updatedAt > lastSync + 1000)) {
+            setMessage('检测到更新的云端版本，已暂停自动上传。请先恢复云端数据或手动确认覆盖。')
+            return
+          }
+          const timestamp = await uploadCloudSnapshot(await createLearningBackup(subjects, profile))
+          localStorage.setItem('cs_cloud_last_sync', String(timestamp))
+          setLastSync(timestamp)
+          setMessage('学习数据已自动同步。')
+        } catch (error) {
+          setMessage(`自动同步失败：${(error as Error).message}`)
+        }
+      }, 1800)
+    }
+    window.addEventListener(DATA_CHANGED_EVENT, sync)
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, sync)
+      if (timer) clearTimeout(timer)
+    }
+  }, [autoSync, lastSync, profile, session, subjects])
 
   const sendLink = async () => {
     if (!email.trim()) return
@@ -52,10 +94,22 @@ export default function CloudSyncCard() {
     setBusy('upload')
     setMessage('')
     try {
+      const remote = await downloadCloudSnapshot()
+      if (remote && (!lastSync || remote.updatedAt > lastSync + 1000)) {
+        const overwrite = await confirmDialog(
+          '云端存在比本机最近同步时间更新的版本。继续会用当前本机数据覆盖云端最新版，但历史版本仍可恢复。',
+          { title: '检测到同步冲突', confirmText: '仍然覆盖云端' },
+        )
+        if (!overwrite) {
+          setMessage('已取消覆盖，你可以先恢复云端最新版。')
+          return
+        }
+      }
       const timestamp = await uploadCloudSnapshot(await createLearningBackup(subjects, profile))
       localStorage.setItem('cs_cloud_last_sync', String(timestamp))
       setLastSync(timestamp)
       setMessage('当前学习数据已安全保存到云端。')
+      setVersions(await listCloudVersions())
     } catch (error) {
       setMessage(`同步失败：${(error as Error).message}`)
     } finally {
@@ -63,11 +117,11 @@ export default function CloudSyncCard() {
     }
   }
 
-  const download = async () => {
+  const download = async (versionId?: string) => {
     setBusy('download')
     setMessage('')
     try {
-      const snapshot = await downloadCloudSnapshot()
+      const snapshot = await downloadCloudSnapshot(versionId)
       if (!snapshot) {
         setMessage('云端还没有学习数据。')
         return
@@ -98,6 +152,13 @@ export default function CloudSyncCard() {
     } finally {
       setBusy(null)
     }
+  }
+
+  const toggleAutoSync = () => {
+    const next = !autoSync
+    setAutoSync(next)
+    localStorage.setItem('cs_cloud_auto_sync', String(next))
+    setMessage(next ? '自动同步已开启，学习数据变更后会延迟同步。' : '自动同步已关闭。')
   }
 
   return (
@@ -135,9 +196,13 @@ export default function CloudSyncCard() {
 
         {configured && session && (
           <div className="page-actions">
-            <button className="btn-outline" onClick={download} disabled={Boolean(busy)}>
+            <button className="btn-outline" onClick={() => void download()} disabled={Boolean(busy)}>
               {busy === 'download' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
               恢复云端
+            </button>
+            <button className="btn-outline" onClick={() => setShowVersions((value) => !value)} disabled={Boolean(busy)}>
+              <History className="w-4 h-4" />
+              历史版本
             </button>
             <button className="btn-primary" onClick={upload} disabled={Boolean(busy)}>
               {busy === 'upload' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
@@ -169,6 +234,33 @@ export default function CloudSyncCard() {
             {busy === 'login' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             发送登录链接
           </button>
+        </div>
+      )}
+
+      {configured && session && (
+        <div className="mt-4 pt-4 border-t border-[var(--border)]">
+          <label className="flex items-center gap-2 text-xs text-bone-muted cursor-pointer w-fit">
+            <input type="checkbox" checked={autoSync} onChange={toggleAutoSync} />
+            学习记录变化后自动同步
+          </label>
+          {showVersions && (
+            <div className="grid gap-2 mt-3">
+              {versions.length === 0 ? (
+                <p className="text-[10px] text-bone-faint">暂无历史版本；执行一次同步后会在这里保留快照。</p>
+              ) : versions.slice(0, 5).map((version) => (
+                <button
+                  key={version.id}
+                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] px-3 py-2 text-left hover:border-[var(--accent-border)]"
+                  onClick={() => void download(version.id)}
+                  disabled={Boolean(busy)}
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-[var(--accent)]" />
+                  <span className="flex-1 text-[11px] text-bone">{formatSyncTime(version.createdAt)}</span>
+                  <span className="text-[9px] text-bone-faint">{version.subjectCount} 个科目</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>

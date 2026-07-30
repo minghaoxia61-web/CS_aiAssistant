@@ -72,20 +72,68 @@ export async function uploadCloudSnapshot(backup: LearningBackup): Promise<numbe
       { onConflict: 'user_id' },
     )
   if (error) throw error
+  const { error: versionError } = await getClient()
+    .from('learning_snapshot_versions')
+    .insert({
+      user_id: userId,
+      payload: backup,
+      created_at: updatedAt,
+    })
+  if (
+    versionError &&
+    versionError.code !== '42P01' &&
+    versionError.code !== 'PGRST205'
+  ) {
+    throw versionError
+  }
   return Date.parse(updatedAt)
 }
 
-export async function downloadCloudSnapshot(): Promise<{ backup: LearningBackup; updatedAt: number } | null> {
+export interface CloudSnapshotVersion {
+  id: string
+  createdAt: number
+  subjectCount: number
+}
+
+export async function listCloudVersions(): Promise<CloudSnapshotVersion[]> {
   const userId = await requireUserId()
   const { data, error } = await getClient()
-    .from('learning_snapshots')
-    .select('payload, updated_at')
+    .from('learning_snapshot_versions')
+    .select('id, created_at, payload')
     .eq('user_id', userId)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
+    .limit(8)
+  if (error?.code === '42P01' || error?.code === 'PGRST205') return []
+  if (error) throw error
+  return (data || []).map((item) => ({
+    id: String(item.id),
+    createdAt: Date.parse(item.created_at),
+    subjectCount: (item.payload as LearningBackup)?.subjects?.length || 0,
+  }))
+}
+
+export async function downloadCloudSnapshot(
+  versionId?: string,
+): Promise<{ backup: LearningBackup; updatedAt: number } | null> {
+  const userId = await requireUserId()
+  const query = versionId
+    ? getClient()
+        .from('learning_snapshot_versions')
+        .select('payload, created_at')
+        .eq('user_id', userId)
+        .eq('id', versionId)
+        .maybeSingle()
+    : getClient()
+        .from('learning_snapshots')
+        .select('payload, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+  const { data, error } = await query
   if (error) throw error
   if (!data) return null
+  const timestamp = 'updated_at' in data ? data.updated_at : data.created_at
   return {
     backup: data.payload as LearningBackup,
-    updatedAt: Date.parse(data.updated_at),
+    updatedAt: Date.parse(timestamp),
   }
 }

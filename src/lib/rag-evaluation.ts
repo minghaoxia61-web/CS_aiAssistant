@@ -1,5 +1,5 @@
 import type { ChatSession } from '@/shared/types'
-import { retrieveChunks, type Chunk } from './rag'
+import { chunkLocator, retrieveChunks, type Chunk } from './rag'
 
 export interface RagEvaluationCase {
   id: string
@@ -70,7 +70,7 @@ export function buildRagEvaluationCases(chunks: Chunk[], limit = 16): RagEvaluat
     query: caseQuery(chunk),
     expectedMaterialId: chunk.materialId,
     expectedChunkIndex: chunk.index,
-    sourceLabel: `${chunk.materialName} · 片段 ${chunk.index + 1}`,
+    sourceLabel: `${chunk.materialName} · ${chunkLocator(chunk)}`,
   }))
 }
 
@@ -90,7 +90,7 @@ export function runRagBenchmark(
     return {
       ...item,
       rank: rankIndex >= 0 ? rankIndex + 1 : null,
-      retrieved: retrieved.map((chunk) => `${chunk.materialName} · 片段 ${chunk.index + 1}`),
+      retrieved: retrieved.map((chunk) => `${chunk.materialName} · ${chunkLocator(chunk)}`),
     }
   })
 

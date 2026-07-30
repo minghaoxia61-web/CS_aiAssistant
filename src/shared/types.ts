@@ -118,6 +118,10 @@ export interface QuizQuestion {
   chapter?: string;
   /** 单题耗时（秒），计时模式下统计 */
   time_spent?: number;
+  /** 作答过程中修改答案的次数，用于识别犹豫与概念混淆 */
+  answer_changes?: number;
+  /** 自适应学习模型推断的错误类型 */
+  error_category?: 'knowledge_gap' | 'careless' | 'misconception' | 'forgotten';
   /** 代码题/简答题得分（0-100），由 AI 批改给出 */
   score?: number;
   /** 代码题问题列表（语法/逻辑/复杂度） */

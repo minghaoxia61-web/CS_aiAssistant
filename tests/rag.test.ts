@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { chunksToContext, retrieveChunks, type Chunk } from '../src/lib/rag'
+import { chunkLocator, chunksToContext, chunkText, retrieveChunks, type Chunk } from '../src/lib/rag'
 
 const chunks: Chunk[] = [
   {
@@ -44,4 +44,22 @@ test('上下文包含可辨识的资料名称', () => {
   const context = chunksToContext([chunks[1]])
   assert.match(context, /数据库\.md/)
   assert.match(context, /原子性/)
+})
+
+test('PDF 页码标记会转为可读引用且不会污染正文', () => {
+  const [chunk] = chunkText(
+    '[[PAGE:3]]\n进程是资源分配的基本单位。\n\n[[PAGE:4]]\n线程是调度的基本单位。',
+    'os',
+    '操作系统.pdf',
+    'subject-1',
+  )
+  assert.equal(chunk.pageStart, 3)
+  assert.equal(chunk.pageEnd, 4)
+  assert.equal(chunkLocator(chunk), '第 3–4 页')
+  assert.doesNotMatch(chunk.text, /\[\[PAGE:/)
+})
+
+test('幻灯片定位使用幻灯片编号', () => {
+  const [chunk] = chunkText('[[SLIDE:7]]\n栈遵循后进先出原则。', 'ds', '数据结构.pptx')
+  assert.equal(chunkLocator(chunk), '幻灯片 7')
 })

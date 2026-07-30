@@ -8,12 +8,16 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
+  Edit3,
   GitBranch,
+  Loader2,
   MessageSquareText,
   Play,
   RefreshCw,
   Route,
+  ShieldAlert,
   Target,
+  WandSparkles,
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
@@ -34,6 +38,15 @@ import {
   type MasteryStatus,
 } from '@/lib/learning-intelligence'
 import { cn } from '@/lib/utils'
+import { summarizeAnswerQuality } from '@/lib/answer-evaluation'
+import {
+  generateSemanticGraph,
+  loadSemanticGraph,
+  updateSemanticNode,
+  type SemanticKnowledgeGraph,
+} from '@/lib/semantic-graph'
+import { buildStudentModel } from '@/lib/student-model'
+import { promptDialog } from '@/lib/dialog'
 import type { ChatSession, Material, QuizSession, WrongQuestion } from '@/shared/types'
 
 interface LabData {
@@ -54,10 +67,13 @@ const STATUS_LABEL: Record<MasteryStatus, string> = {
 
 export default function LearningLab() {
   const navigate = useNavigate()
-  const { currentSubjectId, subjects } = useStore()
+  const { currentSubjectId, subjects, config } = useStore()
   const [data, setData] = useState<LabData>(EMPTY)
   const [benchmark, setBenchmark] = useState<RagBenchmark | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [semanticGraph, setSemanticGraph] = useState<SemanticKnowledgeGraph | null>(null)
+  const [generatingGraph, setGeneratingGraph] = useState(false)
+  const [graphMessage, setGraphMessage] = useState('')
   const subject = subjects.find((item) => item.id === currentSubjectId)
 
   useEffect(() => {
@@ -81,6 +97,7 @@ export default function LearningLab() {
     } catch {
       setBenchmark(null)
     }
+    setSemanticGraph(loadSemanticGraph(currentSubjectId))
     return () => {
       cancelled = true
     }
@@ -101,9 +118,28 @@ export default function LearningLab() {
     [mastery, data.wrongQuestions],
   )
   const grounding = useMemo(() => calculateGroundingStats(data.chats), [data.chats])
+  const answerQuality = useMemo(() => summarizeAnswerQuality(data.chats), [data.chats])
+  const studentModel = useMemo(
+    () => buildStudentModel(data.quizzes, data.wrongQuestions),
+    [data.quizzes, data.wrongQuestions],
+  )
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) || graph.nodes[0]
   const mastered = mastery.filter((item) => item.status === 'mastered').length
   const evaluated = mastery.filter((item) => item.attempts > 0).length
+  const masteryRows = studentModel.trajectories.length
+    ? studentModel.trajectories.map((item) => ({
+        id: item.chapter,
+        title: item.chapter,
+        status: (item.mastery < 50 ? 'weak' : item.mastery < 80 ? 'developing' : 'mastered') as MasteryStatus,
+        attempts: item.attempts,
+        confidence: Math.min(100, Math.round((1 - Math.exp(-item.attempts / 3)) * 100)),
+        score: item.mastery,
+        detail: `遗忘风险 ${item.forgettingRisk}% · ${item.trend >= 0 ? '进步' : '回落'} ${Math.abs(item.trend)}% · 下次 ${item.nextDifficulty}`,
+      }))
+    : mastery.map((item) => ({
+        ...item,
+        detail: `${STATUS_LABEL[item.status]} · ${item.attempts} 次证据 · 置信度 ${item.confidence}%`,
+      }))
 
   const handleBenchmark = () => {
     if (!currentSubjectId || chunks.length === 0) return
@@ -114,6 +150,32 @@ export default function LearningLab() {
     )
     setBenchmark(result)
     localStorage.setItem(`cs_rag_benchmark:${currentSubjectId}`, JSON.stringify(result))
+  }
+
+  const enhanceGraph = async () => {
+    if (!currentSubjectId || !config || generatingGraph) return
+    setGeneratingGraph(true)
+    setGraphMessage('')
+    try {
+      const generated = await generateSemanticGraph(currentSubjectId, readyMaterials, config)
+      setSemanticGraph(generated)
+      setGraphMessage(`已从课件提取 ${generated.nodes.length} 个语义节点和 ${generated.edges.length} 条关系。`)
+    } catch (error) {
+      setGraphMessage(`图谱生成失败：${(error as Error).message}`)
+    } finally {
+      setGeneratingGraph(false)
+    }
+  }
+
+  const editSemanticNode = async (nodeId: string, currentTitle: string) => {
+    if (!semanticGraph) return
+    const title = await promptDialog('修改知识节点名称', {
+      title: '人工校正图谱',
+      defaultValue: currentTitle,
+      confirmText: '保存并标记已验证',
+    })
+    if (!title?.trim()) return
+    setSemanticGraph(updateSemanticNode(semanticGraph, nodeId, { title: title.trim(), verified: true }))
   }
 
   const askNode = (node: KnowledgeNode) => {
@@ -216,8 +278,8 @@ export default function LearningLab() {
             <LabMetric value={benchmark ? `${benchmark.hitAt3}%` : '--'} label="Hit@3" />
             <LabMetric value={benchmark ? `${benchmark.hitAt5}%` : '--'} label="Hit@5" />
             <LabMetric value={benchmark ? `${benchmark.meanReciprocalRank}%` : '--'} label="MRR" />
-            <LabMetric value={`${grounding.citationCoverage}%`} label="回答引用覆盖率" />
-            <LabMetric value={`${grounding.incorrectRate}%`} label="用户标记不准确" />
+            <LabMetric value={`${answerQuality.evidenceAlignment}%`} label="答案证据一致性" />
+            <LabMetric value={`${answerQuality.citationValidity}%`} label="引用有效率" />
           </div>
 
           {benchmark ? (
@@ -243,6 +305,16 @@ export default function LearningLab() {
               <span>点击“运行评测”，建立当前资料的第一版可重复检索基线。</span>
             </div>
           )}
+          {answerQuality.evaluatedAnswers > 0 && (
+            <div className={cn('answer-quality-strip', answerQuality.highRiskAnswers > 0 && 'has-risk')}>
+              <ShieldAlert className="w-4 h-4" />
+              <span>
+                已评估 {answerQuality.evaluatedAnswers} 条回答，其中 {answerQuality.highRiskAnswers} 条存在较高幻觉风险；
+                无证据问题的正确拒答率为 {answerQuality.refusalAccuracy}%。
+              </span>
+              <small>用户引用覆盖率 {grounding.citationCoverage}%</small>
+            </div>
+          )}
         </section>
 
         <section className="panel p-5">
@@ -252,8 +324,34 @@ export default function LearningLab() {
               <h3>课件知识地图</h3>
               <p>基于标题层级生成包含关系，同级知识点按课件顺序形成前置学习路径。</p>
             </div>
-            <span className="lab-badge"><GitBranch className="w-3.5 h-3.5" /> {graph.edges.length} 条关系</span>
+            <div className="page-actions">
+              <span className="lab-badge"><GitBranch className="w-3.5 h-3.5" /> {semanticGraph?.edges.length || graph.edges.length} 条关系</span>
+              <button className="btn-outline" onClick={enhanceGraph} disabled={!config || generatingGraph}>
+                {generatingGraph ? <Loader2 className="w-4 h-4 animate-spin" /> : <WandSparkles className="w-4 h-4" />}
+                {semanticGraph ? '重新提取语义图谱' : 'AI 增强图谱'}
+              </button>
+            </div>
           </div>
+
+          {graphMessage && <p className="text-[10px] text-[var(--accent)] mb-3">{graphMessage}</p>}
+          {semanticGraph && semanticGraph.nodes.length > 0 && (
+            <div className="semantic-graph-panel">
+              <div className="semantic-node-grid">
+                {semanticGraph.nodes.slice(0, 12).map((node) => (
+                  <div key={node.id} className="semantic-node">
+                    <span>{node.kind}</span>
+                    <strong>{node.title}</strong>
+                    <p>{node.definition}</p>
+                    <small>{node.locator} · 可信度 {node.confidence}%</small>
+                    <blockquote>{node.evidence}</blockquote>
+                    <button onClick={() => void editSemanticNode(node.id, node.title)}>
+                      <Edit3 className="w-3 h-3" />{node.verified ? '已人工验证' : '校正'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="knowledge-map-layout">
             <div className="knowledge-node-list">
@@ -323,11 +421,11 @@ export default function LearningLab() {
 
           <div className="adaptive-layout">
             <div className="mastery-list">
-              {mastery.slice(0, 10).map((item) => (
+              {masteryRows.slice(0, 10).map((item) => (
                 <div className="mastery-row" key={item.id}>
                   <div>
                     <strong>{item.title}</strong>
-                    <small>{STATUS_LABEL[item.status]} · {item.attempts} 次证据 · 置信度 {item.confidence}%</small>
+                    <small>{item.detail}</small>
                   </div>
                   <div className="mastery-score">
                     <span>{item.attempts ? `${item.score}%` : '--'}</span>
@@ -351,6 +449,15 @@ export default function LearningLab() {
               ))}
             </div>
           </div>
+          {studentModel.trajectories.length > 0 && (
+            <div className="error-distribution">
+              <span>错误归因</span>
+              <div><strong>{studentModel.errorDistribution.knowledge_gap}</strong><small>知识缺口</small></div>
+              <div><strong>{studentModel.errorDistribution.misconception}</strong><small>概念混淆</small></div>
+              <div><strong>{studentModel.errorDistribution.careless}</strong><small>粗心失误</small></div>
+              <div><strong>{studentModel.errorDistribution.forgotten}</strong><small>遗忘回退</small></div>
+            </div>
+          )}
         </section>
       </div>
     </div>

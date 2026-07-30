@@ -1306,8 +1306,21 @@ select {
   .readiness-ring strong { font-size: 28px; }
   .dashboard-hero .btn { white-space: nowrap; }
   .metric-grid { grid-template-columns: 1fr; }
-  .page-header { min-height: 88px; padding: 16px 18px; align-items: flex-start; }
-  .page-header > div:last-child { align-self: center; }
+  .page-header {
+    min-height: 88px;
+    padding: 16px 18px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .page-header > div:first-child { width: 100%; }
+  .page-header > div:last-child {
+    width: 100%;
+    align-self: stretch;
+    justify-content: flex-start;
+  }
+  .page-header h2,
+  .page-header p { white-space: normal; }
 }
 
 .review-queue {
@@ -1534,6 +1547,92 @@ select {
   .knowledge-node-card { width: calc(100% - 36px); }
 }
 
+.answer-quality-strip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 11px 13px;
+  color: var(--sage);
+  background: color-mix(in srgb, var(--sage) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sage) 20%, transparent);
+  border-radius: 12px;
+  font-size: 10px;
+}
+.answer-quality-strip.has-risk { color: var(--rust); background: color-mix(in srgb, var(--rust) 7%, transparent); border-color: color-mix(in srgb, var(--rust) 20%, transparent); }
+.answer-quality-strip small { margin-left: auto; color: var(--text-faint); }
+.answer-quality-badge { display: flex; align-items: center; gap: 6px; width: fit-content; margin-top: 10px; padding: 6px 8px; border-radius: 8px; font-size: 9px; }
+.answer-quality-badge small { margin-left: 4px; opacity: .8; }
+.answer-quality-badge.risk-low { color: var(--sage); background: color-mix(in srgb, var(--sage) 10%, transparent); }
+.answer-quality-badge.risk-medium { color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, transparent); }
+.answer-quality-badge.risk-high { color: var(--rust); background: color-mix(in srgb, var(--rust) 10%, transparent); }
+
+.semantic-graph-panel { margin-bottom: 18px; padding: 14px; border-radius: 16px; background: linear-gradient(145deg, color-mix(in srgb, var(--violet) 7%, var(--bg-elevated)), var(--bg-surface)); border: 1px solid var(--border); }
+.semantic-node-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; max-height: 430px; overflow-y: auto; }
+.semantic-node { position: relative; padding: 13px; border-radius: 12px; background: var(--bg-surface); border: 1px solid var(--border); }
+.semantic-node > span { color: var(--violet); font: 600 8px var(--font-mono); text-transform: uppercase; }
+.semantic-node strong { display: block; margin-top: 5px; color: var(--text-primary); font-size: 12px; }
+.semantic-node p { margin-top: 5px; min-height: 32px; color: var(--text-muted); font-size: 9px; line-height: 1.55; }
+.semantic-node small { display: block; margin-top: 6px; color: var(--text-faint); font-size: 8px; }
+.semantic-node blockquote { margin-top: 8px; padding: 7px 8px; color: var(--text-muted); background: var(--bg-elevated); border-left: 2px solid var(--accent); border-radius: 0 7px 7px 0; font-size: 8px; line-height: 1.5; }
+.semantic-node button { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; color: var(--accent); font-size: 8px; }
+.error-distribution { display: grid; grid-template-columns: 100px repeat(4, 1fr); gap: 8px; align-items: center; margin-top: 16px; padding: 12px; border-top: 1px solid var(--border); }
+.error-distribution > span { color: var(--text-muted); font-size: 10px; }
+.error-distribution div { padding: 8px 10px; border-radius: 9px; background: var(--bg-elevated); }
+.error-distribution strong, .error-distribution small { display: block; }
+.error-distribution strong { color: var(--text-primary); font-size: 16px; }
+.error-distribution small { margin-top: 2px; color: var(--text-faint); font-size: 8px; }
+
+/* Teacher workspace */
+.teacher-workspace { display: grid; gap: 18px; }
+.teacher-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px; border-radius: 20px; background: linear-gradient(135deg, var(--bg-elevated), color-mix(in srgb, var(--violet) 8%, var(--bg-surface))); border: 1px solid var(--border-strong); }
+.teacher-hero h2 { margin-top: 6px; color: var(--text-primary); font: 700 26px var(--font-display); }
+.teacher-hero p { margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+.teacher-code { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; padding: 13px 16px; border-radius: 14px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); text-align: left; }
+.teacher-code span { grid-column: 1 / -1; color: var(--text-muted); font-size: 8px; }
+.teacher-code strong { margin-top: 3px; font: 700 20px var(--font-mono); letter-spacing: .16em; }
+.teacher-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.teacher-metric { display: flex; align-items: center; gap: 12px; padding: 15px; border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border); }
+.teacher-metric > span { width: 34px; height: 34px; display: grid; place-items: center; color: var(--accent); background: var(--accent-soft); border-radius: 10px; }
+.teacher-metric svg { width: 15px; height: 15px; }
+.teacher-metric strong, .teacher-metric small { display: block; }
+.teacher-metric strong { color: var(--text-primary); font-size: 18px; }
+.teacher-metric small { margin-top: 2px; color: var(--text-faint); font-size: 8px; }
+.teacher-heatmap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.teacher-heat-cell { padding: 12px; border-radius: 11px; border: 1px solid transparent; }
+.teacher-heat-cell.risk-high { background: color-mix(in srgb, var(--rust) 10%, transparent); border-color: color-mix(in srgb, var(--rust) 20%, transparent); }
+.teacher-heat-cell.risk-medium { background: color-mix(in srgb, var(--amber) 10%, transparent); border-color: color-mix(in srgb, var(--amber) 20%, transparent); }
+.teacher-heat-cell.risk-low { background: color-mix(in srgb, var(--sage) 10%, transparent); border-color: color-mix(in srgb, var(--sage) 20%, transparent); }
+.teacher-heat-cell strong, .teacher-heat-cell span, .teacher-heat-cell small { display: block; }
+.teacher-heat-cell strong { min-height: 30px; color: var(--text-primary); font-size: 10px; }
+.teacher-heat-cell span { margin-top: 5px; color: var(--text-primary); font: 700 20px var(--font-display); }
+.teacher-heat-cell small { margin-top: 3px; color: var(--text-faint); font-size: 8px; }
+.teacher-assignment-list { display: grid; gap: 8px; }
+.teacher-assignment { display: flex; align-items: center; gap: 9px; padding: 11px; border-radius: 11px; background: var(--bg-elevated); border: 1px solid var(--border); }
+.teacher-assignment > svg { color: var(--accent); }
+.teacher-assignment > div { flex: 1; min-width: 0; }
+.teacher-assignment strong, .teacher-assignment small { display: block; }
+.teacher-assignment strong { color: var(--text-primary); font-size: 10px; }
+.teacher-assignment small { margin-top: 3px; color: var(--text-faint); font-size: 8px; }
+.teacher-assignment > span { color: var(--sage); font-size: 8px; }
+
+@media (max-width: 900px) {
+  .semantic-node-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .teacher-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .teacher-heatmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .answer-quality-strip { align-items: flex-start; flex-wrap: wrap; }
+  .answer-quality-strip small { width: 100%; margin-left: 24px; }
+  .semantic-node-grid { grid-template-columns: 1fr; }
+  .error-distribution { grid-template-columns: repeat(2, 1fr); }
+  .error-distribution > span { grid-column: 1 / -1; }
+  .teacher-hero { align-items: flex-start; flex-direction: column; }
+  .teacher-code { width: 100%; }
+  .teacher-metrics, .teacher-heatmap { grid-template-columns: 1fr; }
+}
+
 .answer-feedback {
   display: flex;
   align-items: center;
@@ -1614,14 +1713,21 @@ select {
     bottom: 0;
     z-index: 60;
     width: 268px !important;
-    transform: translateX(-105%);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100%);
     box-shadow: none;
-    transition: transform 220ms ease;
+    transition: transform 220ms ease, opacity 180ms ease, visibility 220ms step-end;
   }
 
   .app-sidebar.mobile-nav-open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
     transform: translateX(0);
     box-shadow: var(--shadow-lg);
+    transition: transform 220ms ease, opacity 180ms ease;
   }
   .app-sidebar h1,
   .app-sidebar h1 + div,

@@ -67,7 +67,7 @@ async function parsePdf(buffer: ArrayBuffer, taskId: string): Promise<string> {
       .map((item) => ('str' in item ? item.str : ''))
       .join(' ')
     if (pageText.trim()) {
-      texts.push(`[Page ${i}]\n${pageText.trim()}`)
+      texts.push(`[[PAGE:${i}]]\n${pageText.trim()}`)
     }
     send({
       taskId,
@@ -101,7 +101,7 @@ async function parsePptx(buffer: ArrayBuffer, taskId: string): Promise<string> {
     const xml = await zip.files[slideFiles[i]].async('string')
     const slideTexts = extractTextFromSlideXml(xml)
     if (slideTexts.length) {
-      texts.push(`[Page ${i + 1}]\n${slideTexts.join('\n')}`)
+      texts.push(`[[SLIDE:${i + 1}]]\n${slideTexts.join('\n')}`)
     }
     send({
       taskId,

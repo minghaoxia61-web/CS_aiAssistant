@@ -2,7 +2,7 @@
 // 使用全局 chat-store，切换页面不丢失正在生成的回复
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessagesSquare, Plus, Send, Square, FileText, History, Paperclip, Trash2, Copy, Check, ThumbsUp, ThumbsDown, BookOpenCheck, ChevronDown } from 'lucide-react'
+import { MessagesSquare, Plus, Send, Square, FileText, History, Paperclip, Trash2, Copy, Check, ThumbsUp, ThumbsDown, BookOpenCheck, ChevronDown, ShieldCheck } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import Markdown from '@/components/Markdown'
@@ -13,6 +13,7 @@ import { estimateMaterialsTokens } from '@/lib/llm'
 import { onModelStatusChange, type ModelStatus } from '@/lib/vector'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, Material } from '@/shared/types'
+import { evaluateAnswerQuality } from '@/lib/answer-evaluation'
 
 const QUICK_CMDS = [
   '总结这章的核心知识点',
@@ -362,6 +363,9 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
   const [showSources, setShowSources] = useState(false)
   const navigate = useNavigate()
   const setMessageFeedback = useChatStore((state) => state.setMessageFeedback)
+  const quality = !isUser && message.content
+    ? evaluateAnswerQuality(message.content, message.citations)
+    : null
 
   const copyContent = () => {
     navigator.clipboard.writeText(message.content)
@@ -422,6 +426,19 @@ function MessageBubble({ message, streaming }: { message: ChatMessage; streaming
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+            {!streaming && quality && (
+              <div className={cn('answer-quality-badge', `risk-${quality.hallucinationRisk}`)}>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>证据一致性 {quality.evidenceAlignment}%</span>
+                <small>
+                  {quality.hallucinationRisk === 'low'
+                    ? '低风险'
+                    : quality.hallucinationRisk === 'medium'
+                      ? '建议核对'
+                      : '高风险'}
+                </small>
               </div>
             )}
             {!streaming && message.content && (

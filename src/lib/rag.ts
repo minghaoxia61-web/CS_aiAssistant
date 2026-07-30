@@ -13,6 +13,9 @@ export interface Chunk {
   index: number
   /** 所属科目 ID（按科目隔离检索） */
   subjectId?: string
+  pageStart?: number
+  pageEnd?: number
+  locatorType?: 'page' | 'slide'
 }
 
 const CHUNK_TOKENS = 800 // 每块约 800 token
@@ -89,7 +92,54 @@ export function chunkText(
     }
   }
   flush()
+  let currentPage: number | undefined
+  let currentSlide: number | undefined
+  for (const chunk of chunks) {
+    const pages = Array.from(chunk.text.matchAll(/\[\[(?:PAGE|Page):(\d+)\]\]|\[Page\s+(\d+)\]/g))
+      .map((match) => Number(match[1] || match[2]))
+      .filter(Number.isFinite)
+    const slides = Array.from(chunk.text.matchAll(/\[\[(?:SLIDE|Slide):(\d+)\]\]/g))
+      .map((match) => Number(match[1]))
+      .filter(Number.isFinite)
+    if (pages.length) {
+      currentPage = pages[pages.length - 1]
+      chunk.pageStart = pages[0]
+      chunk.pageEnd = pages[pages.length - 1]
+      chunk.locatorType = 'page'
+    } else if (currentPage !== undefined) {
+      chunk.pageStart = currentPage
+      chunk.pageEnd = currentPage
+      chunk.locatorType = 'page'
+    }
+    if (slides.length) {
+      currentSlide = slides[slides.length - 1]
+      chunk.pageStart = slides[0]
+      chunk.pageEnd = slides[slides.length - 1]
+      chunk.locatorType = 'slide'
+    } else if (currentSlide !== undefined && currentPage === undefined) {
+      chunk.pageStart = currentSlide
+      chunk.pageEnd = currentSlide
+      chunk.locatorType = 'slide'
+    }
+    chunk.text = chunk.text
+      .replace(/\[\[(?:PAGE|Page|SLIDE|Slide):\d+\]\]|\[Page\s+\d+\]/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
   return chunks
+}
+
+export function chunkLocator(chunk: Chunk): string {
+  if (!chunk.pageStart) return `片段 ${chunk.index + 1}`
+  if (chunk.locatorType === 'slide') {
+    return chunk.pageEnd && chunk.pageEnd !== chunk.pageStart
+      ? `幻灯片 ${chunk.pageStart}–${chunk.pageEnd}`
+      : `幻灯片 ${chunk.pageStart}`
+  }
+  if (chunk.pageEnd && chunk.pageEnd !== chunk.pageStart) {
+    return `第 ${chunk.pageStart}–${chunk.pageEnd} 页`
+  }
+  return `第 ${chunk.pageStart} 页`
 }
 
 /** 分块所有资料（可按科目隔离，分块带 subjectId 标记） */
@@ -360,7 +410,7 @@ export function chunksToContext(chunks: Chunk[]): string {
   return chunks
     .map(
       (chunk, index) =>
-        `=== [资料${index + 1}] ${chunk.materialName} · 片段 ${chunk.index + 1} ===\n${chunk.text}`,
+        `=== [资料${index + 1}] ${chunk.materialName} · ${chunkLocator(chunk)} ===\n${chunk.text}`,
     )
     .join('\n\n')
     .trim()

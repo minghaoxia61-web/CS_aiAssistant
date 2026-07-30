@@ -2,8 +2,9 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import { streamChat, buildChatSystemPrompt, estimateMaterialsTokens, summarizeMaterial } from '@/lib/llm'
-import { chunkMaterials, retrieveChunks, chunksToContext, type Chunk } from '@/lib/rag'
+import { chunkMaterials, retrieveChunks, chunksToContext, chunkLocator, type Chunk } from '@/lib/rag'
 import { ensureSubjectVectors, loadSubjectVectors, embedQuery } from '@/lib/vector'
+import { notifyLearningDataChanged } from '@/lib/data-events'
 import type { ApiConfig, ChatSession, ChatMessage, ChatCitation, Material, UserProfile } from '@/shared/types'
 
 /** 持久化索引文件结构（与 electron/store.ts SubjectIndexData 对应） */
@@ -313,7 +314,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           materialName: chunk.materialName,
           chunkIndex: chunk.index,
           rank: index + 1,
-          locator: `片段 ${chunk.index + 1}`,
+          locator: chunkLocator(chunk),
           excerpt: chunk.text.replace(/\s+/g, ' ').slice(0, 180),
         }))
       }
@@ -380,6 +381,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const finalSession = { ...updated, messages: finalMessages }
       set({ currentSession: finalSession, streaming: false, streamPhase: 'idle' })
       await saveWithRetry(finalSession)
+      notifyLearningDataChanged()
       set((state) => {
         const idx = state.sessions.findIndex((x) => x.id === finalSession.id)
         if (idx >= 0) {

@@ -11,6 +11,7 @@ import { chatJSON, SYSTEM_PROMPTS, buildQuizPrompt, buildGradePrompt, extractJSO
 import { formatTime, cn } from '@/lib/utils'
 import type { Material, QuizSession, QuizQuestion, QuizQuestionType, QuizDifficulty, QuizRatios, CodeIssue, ScoringPoint } from '@/shared/types'
 import { v4 as uuidv4 } from 'uuid'
+import { notifyLearningDataChanged } from '@/lib/data-events'
 
 type Phase = 'config' | 'taking' | 'report'
 
@@ -51,6 +52,7 @@ export default function Quiz() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [answerChanges, setAnswerChanges] = useState<Record<string, number>>({})
   const [session, setSession] = useState<QuizSession | null>(null)
   const [grading, setGrading] = useState(false)
   const [report, setReport] = useState<QuizSession | null>(null)
@@ -268,6 +270,7 @@ export default function Quiz() {
       setSession(newSession)
       setQuestions(qs)
       setAnswers({})
+      setAnswerChanges({})
       setCurrentIdx(0)
       // 初始化计时与单题耗时统计
       setQuestionTimes({})
@@ -287,7 +290,12 @@ export default function Quiz() {
   }
 
   const setAnswer = (qid: string, val: string) => {
-    setAnswers((prev) => ({ ...prev, [qid]: val }))
+    setAnswers((prev) => {
+      if (prev[qid] !== undefined && prev[qid] !== val) {
+        setAnswerChanges((counts) => ({ ...counts, [qid]: (counts[qid] || 0) + 1 }))
+      }
+      return { ...prev, [qid]: val }
+    })
   }
 
   const unansweredCount = questions.filter((q) => !(answers[q.id] || '').trim()).length
@@ -311,6 +319,7 @@ export default function Quiz() {
       ...q,
       user_answer: answers[q.id] || '',
       time_spent: finalTimes[q.id] ? Math.round(finalTimes[q.id] / 1000) : q.time_spent,
+      answer_changes: answerChanges[q.id] || 0,
     }))
 
     // 单选/多选本地批改
@@ -376,6 +385,7 @@ export default function Quiz() {
       last_attempt_at: Date.now(),
     }
     await window.api.saveQuizSession(finalSession)
+    notifyLearningDataChanged()
     setReport(finalSession)
     setSession(finalSession)
     setPhase('report')
@@ -388,6 +398,7 @@ export default function Quiz() {
     setPhase('config')
     setQuestions([])
     setAnswers({})
+    setAnswerChanges({})
     setSession(null)
     setReport(null)
     setCurrentIdx(0)
@@ -409,6 +420,7 @@ export default function Quiz() {
     setSession(s)
     setQuestions(resetQuestions)
     setAnswers({})
+    setAnswerChanges({})
     setCurrentIdx(0)
     setReport(null)
     setQuestionTimes({})

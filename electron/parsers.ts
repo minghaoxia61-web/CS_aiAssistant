@@ -54,7 +54,18 @@ export async function parseFile(filePath: string, config?: ApiConfig): Promise<P
 
 async function parsePdf(filePath: string): Promise<string> {
   const buffer = fs.readFileSync(filePath);
-  const data = await pdfParse(buffer);
+  let pageNumber = 0;
+  const data = await pdfParse(buffer, {
+    pagerender: async (pageData) => {
+      pageNumber += 1;
+      const content = await pageData.getTextContent();
+      const text = content.items
+        .map((item: { str?: string }) => item.str || '')
+        .join(' ')
+        .trim();
+      return text ? `[[PAGE:${pageNumber}]]\n${text}` : `[[PAGE:${pageNumber}]]`;
+    },
+  });
   return (data.text || '').trim();
 }
 
@@ -83,7 +94,7 @@ async function parsePptx(filePath: string): Promise<string> {
     const slideTexts = extractTextFromSlideXml(xml);
     if (slideTexts.length) {
       // 每页标注页码，便于分块后 AI 引用来源页码
-      texts.push(`[Page ${pageNum}]\n${slideTexts.join('\n')}`);
+      texts.push(`[[SLIDE:${pageNum}]]\n${slideTexts.join('\n')}`);
     }
   }
   return texts.join('\n\n---\n\n').trim();
