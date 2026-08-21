@@ -1,26 +1,7 @@
-// Express 服务端入口
-// 替代 electron/main.ts，提供 HTTP API + 静态文件服务 + 知识库种子注入
-import express from 'express';
-import multer from 'multer';
+// 传统 Node 服务端入口：提供 HTTP API 与静态前端。
+import app from './app';
 import * as path from 'path';
-import { initStore } from './store';
-import { registerRoutes } from './routes';
-import { seedKnowledgeBase } from './knowledge/seed';
-
-const app = express();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 25 * 1024 * 1024,
-    files: 10,
-  },
-});
-
-app.disable('x-powered-by');
-app.use(express.json({ limit: '12mb' }));
-
-// 注册 API 路由
-registerRoutes(app, upload);
+import express from 'express';
 
 // 静态文件服务（前端构建产物）
 const distDir = path.resolve(process.cwd(), 'dist');
@@ -34,10 +15,6 @@ app.get('*', (req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-
-// 初始化存储 + 知识库种子注入
-initStore();
-seedKnowledgeBase();
 
 app.listen(PORT, () => {
   console.log(`服务器已启动: http://localhost:${PORT}`);

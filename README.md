@@ -267,7 +267,7 @@ npm run audit:secrets-history
 | 异步计算 | Web Worker + Worker 池 |
 | PWA | Service Worker + Web App Manifest |
 | 后端 | Express + Multer（纯 LLM 代理） |
-| 部署 | Railway |
+| 部署 | Vercel（前端 + Express Function）；Railway 配置可选 |
 
 ## 项目结构
 

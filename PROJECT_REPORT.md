@@ -25,6 +25,7 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 - Bayesian Knowledge Tracing、间隔复习、错因分类。
 - 可观察 Agent 状态机与安全阻断。
 - Express 模型代理、Supabase 可选同步、PWA/Electron/Web 多端。
+- Vercel 同域托管前端与 Express Function，Web 数据保存在浏览器 IndexedDB，后端只承担知识库、解析与模型代理。
 
 ## 4. 可复现结果
 
