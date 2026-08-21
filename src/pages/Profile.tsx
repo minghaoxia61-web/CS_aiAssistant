@@ -1,9 +1,13 @@
 // 个人信息页：编辑昵称、年级、学习目标等，AI 对话时参考
-import { useState, useEffect } from 'react'
-import { User, Save, Check } from 'lucide-react'
+import { lazy, Suspense, useState, useEffect } from 'react'
+import { User, Save, Check, Cloud } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
-import CloudSyncCard from '@/components/CloudSyncCard'
 import { useStore } from '@/lib/store'
+
+const CloudSyncCard = lazy(() => import('@/components/CloudSyncCard'))
+const cloudSyncConfigured = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+)
 
 export default function Profile() {
   const { profile, loadProfile, saveProfile } = useStore()
@@ -34,7 +38,16 @@ export default function Profile() {
         icon={<User className="w-5 h-5" />}
       />
       <div className="max-w-2xl mx-auto px-8 py-6 animate-fade-in">
-        <CloudSyncCard />
+        {cloudSyncConfigured ? (
+          <Suspense fallback={<div className="panel p-4 mb-5 text-xs text-bone-muted">正在加载云同步…</div>}>
+            <CloudSyncCard />
+          </Suspense>
+        ) : (
+          <div className="panel p-4 mb-5 flex items-center gap-3 text-xs text-bone-muted">
+            <Cloud className="w-4 h-4 text-amber shrink-0" />
+            <span>当前为本地优先模式。配置 Supabase 环境变量后会按需加载跨设备同步。</span>
+          </div>
+        )}
         <div className="panel p-6 space-y-6">
           {/* 昵称 */}
           <div>

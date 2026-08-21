@@ -12,7 +12,9 @@ dist
 dist-ssr
 dist-electron
 dist-server
-data
+data/*
+!data/evaluation/
+!data/evaluation/rag-gold.json
 data-dev
 data-test
 data-prod-test

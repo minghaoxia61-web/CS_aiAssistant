@@ -13,18 +13,15 @@ import { submitParseTask } from './worker-pool'
 import {
   put,
   bulkPut,
+  getAll,
   openDB,
 } from './db'
+import { DEMO_COURSES } from './demo-content'
 
 const DEMO_SUBJECT_NAME = '数据结构'
 const DEMO_FLAG = 'demo_loaded'
 
-const DEMO_FILES = [
-  { url: '/demo/ch01-intro.pdf', name: '第1章 绪论.pdf', chapter: '绪论' },
-  { url: '/demo/ch03-stack-queue.pdf', name: '第3章 栈与队列.pdf', chapter: '栈与队列' },
-  { url: '/demo/ch05-tree.pdf', name: '第5章 树.pdf', chapter: '树' },
-  { url: '/demo/ch07-dp.pdf', name: '第7章 动态规划.pdf', chapter: '动态规划' },
-]
+const DEMO_FILES = DEMO_COURSES
 
 export interface DemoProgress {
   phase: 'parsing' | 'quiz' | 'done'
@@ -35,7 +32,17 @@ export interface DemoProgress {
 
 export async function isDemoLoaded(): Promise<boolean> {
   try {
-    return localStorage.getItem(DEMO_FLAG) === 'true'
+    if (localStorage.getItem(DEMO_FLAG) !== 'true') return false
+    await openDB()
+    const [subjects, materials] = await Promise.all([
+      getAll<Subject>('subjects'),
+      getAll<Material>('materials'),
+    ])
+    const demoSubjectIds = new Set(subjects.filter((item) => item.name === DEMO_SUBJECT_NAME).map((item) => item.id))
+    const readyCount = materials.filter((item) =>
+      demoSubjectIds.has(item.subject_id) && item.status === 'ready' && item.text_content.trim(),
+    ).length
+    return readyCount >= DEMO_FILES.length
   } catch {
     return false
   }
@@ -58,6 +65,7 @@ export async function loadDemoData(
 
   // 解析 4 份 PDF 课件
   const materials: Material[] = []
+  let fallbackCount = 0
   for (let i = 0; i < DEMO_FILES.length; i++) {
     const f = DEMO_FILES[i]
     onProgress?.({
@@ -83,9 +91,12 @@ export async function loadDemoData(
 
     try {
       const res = await fetch(f.url)
+      if (!res.ok) throw new Error(`演示 PDF 请求失败 (${res.status})`)
       const blob = await res.blob()
+      if (blob.size === 0) throw new Error('演示 PDF 内容为空')
       const file = new File([blob], f.name, { type: 'application/pdf' })
       const result = await submitParseTask(file)
+      if (!result.text.trim()) throw new Error('演示 PDF 未解析出文本')
       const updated: Material = {
         ...material,
         status: 'ready',
@@ -96,7 +107,16 @@ export async function loadDemoData(
       await put('materials', updated)
       materials.push(updated)
     } catch {
-      const updated: Material = { ...material, status: 'failed' }
+      // 部署遗漏 PDF、离线或解析器不可用时，回退到可版本化的内置文本。
+      const updated: Material = {
+        ...material,
+        filename: f.fallbackName,
+        filetype: 'md',
+        size: new Blob([f.fallbackText]).size,
+        status: 'ready',
+        text_content: f.fallbackText,
+      }
+      fallbackCount += 1
       await put('materials', updated)
       materials.push(updated)
     }
@@ -245,5 +265,12 @@ export async function loadDemoData(
     // localStorage 不可用时忽略
   }
 
-  onProgress?.({ phase: 'done', current: DEMO_FILES.length, total: DEMO_FILES.length, message: '示例数据加载完成' })
+  onProgress?.({
+    phase: 'done',
+    current: DEMO_FILES.length,
+    total: DEMO_FILES.length,
+    message: fallbackCount
+      ? `示例数据加载完成（${fallbackCount} 份资料使用内置文本）`
+      : '示例数据加载完成',
+  })
 }

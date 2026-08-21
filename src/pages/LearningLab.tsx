@@ -26,7 +26,8 @@ import { chunkMaterials } from '@/lib/rag'
 import {
   buildRagEvaluationCases,
   calculateGroundingStats,
-  runRagBenchmark,
+  runRagAblation,
+  type RagAblationResult,
   type RagBenchmark,
 } from '@/lib/rag-evaluation'
 import {
@@ -46,6 +47,17 @@ import {
   type SemanticKnowledgeGraph,
 } from '@/lib/semantic-graph'
 import { buildStudentModel } from '@/lib/student-model'
+import { buildKnowledgeTracingModel } from '@/lib/knowledge-tracing'
+import {
+  createLearningAgentRun,
+  loadLearningAgentRun,
+  nextAgentAction,
+  reconcileLearningAgentRun,
+  saveLearningAgentRun,
+  startNextAgentAction,
+  type LearningAgentInput,
+  type LearningAgentRun,
+} from '@/lib/learning-agent'
 import { promptDialog } from '@/lib/dialog'
 import type { ChatSession, Material, QuizSession, WrongQuestion } from '@/shared/types'
 
@@ -65,37 +77,57 @@ const STATUS_LABEL: Record<MasteryStatus, string> = {
   mastered: '已经掌握',
 }
 
+const RETRIEVAL_LABEL = {
+  bm25: 'BM25',
+  ngram: 'N-gram',
+  'lexical-hybrid': '混合检索',
+  'semantic-hybrid': '语义混合',
+} as const
+
 export default function LearningLab() {
   const navigate = useNavigate()
   const { currentSubjectId, subjects, config } = useStore()
   const [data, setData] = useState<LabData>(EMPTY)
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [benchmark, setBenchmark] = useState<RagBenchmark | null>(null)
+  const [ablation, setAblation] = useState<RagAblationResult | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [semanticGraph, setSemanticGraph] = useState<SemanticKnowledgeGraph | null>(null)
   const [generatingGraph, setGeneratingGraph] = useState(false)
   const [graphMessage, setGraphMessage] = useState('')
+  const [agentRun, setAgentRun] = useState<LearningAgentRun | null>(null)
   const subject = subjects.find((item) => item.id === currentSubjectId)
 
   useEffect(() => {
     if (!currentSubjectId) {
       setData(EMPTY)
+      setDataLoaded(false)
       setBenchmark(null)
+      setAblation(null)
+      setAgentRun(null)
       return
     }
     let cancelled = false
+    setDataLoaded(false)
     Promise.all([
       window.api.getMaterials(currentSubjectId),
       window.api.listQuizSessions(currentSubjectId),
       window.api.listWrongQuestions(currentSubjectId),
       window.api.listChatSessions(currentSubjectId),
     ]).then(([materials, quizzes, wrongQuestions, chats]) => {
-      if (!cancelled) setData({ materials, quizzes, wrongQuestions, chats })
+      if (!cancelled) {
+        setData({ materials, quizzes, wrongQuestions, chats })
+        setDataLoaded(true)
+      }
     })
     try {
-      const cached = localStorage.getItem(`cs_rag_benchmark:${currentSubjectId}`)
-      setBenchmark(cached ? (JSON.parse(cached) as RagBenchmark) : null)
+      const cached = localStorage.getItem(`cs_rag_ablation:v2:${currentSubjectId}`)
+      const parsed = cached ? (JSON.parse(cached) as RagAblationResult) : null
+      setAblation(parsed)
+      setBenchmark(parsed?.benchmarks.find((item) => item.strategy === parsed.bestStrategy) || null)
     } catch {
       setBenchmark(null)
+      setAblation(null)
     }
     setSemanticGraph(loadSemanticGraph(currentSubjectId))
     return () => {
@@ -113,9 +145,29 @@ export default function LearningLab() {
   )
   const graph = useMemo(() => buildKnowledgeGraph(readyMaterials), [readyMaterials])
   const mastery = useMemo(() => calculateMastery(graph, data.quizzes), [graph, data.quizzes])
+  const knowledgeTracing = useMemo(
+    () => buildKnowledgeTracingModel(data.quizzes),
+    [data.quizzes],
+  )
+  const decisionMastery = useMemo(() => mastery.map((item) => {
+    const trace = knowledgeTracing.trajectories.find((candidate) => candidate.chapter === item.title)
+    if (!trace) return item
+    const status: MasteryStatus = trace.mastery < 50
+      ? 'weak'
+      : trace.mastery < 80
+        ? 'developing'
+        : 'mastered'
+    return {
+      ...item,
+      score: trace.mastery,
+      confidence: trace.confidence,
+      attempts: trace.attempts,
+      status,
+    }
+  }), [knowledgeTracing, mastery])
   const plan = useMemo(
-    () => buildAdaptivePlan(mastery, data.wrongQuestions),
-    [mastery, data.wrongQuestions],
+    () => buildAdaptivePlan(decisionMastery, data.wrongQuestions),
+    [decisionMastery, data.wrongQuestions],
   )
   const grounding = useMemo(() => calculateGroundingStats(data.chats), [data.chats])
   const answerQuality = useMemo(() => summarizeAnswerQuality(data.chats), [data.chats])
@@ -123,33 +175,61 @@ export default function LearningLab() {
     () => buildStudentModel(data.quizzes, data.wrongQuestions),
     [data.quizzes, data.wrongQuestions],
   )
+  const agentInput = useMemo<LearningAgentInput | null>(() => currentSubjectId && subject
+    ? {
+        subjectId: currentSubjectId,
+        subjectName: subject.name,
+        materials: readyMaterials,
+        quizzes: data.quizzes,
+        wrongQuestions: data.wrongQuestions,
+        chats: data.chats,
+      }
+    : null,
+  [currentSubjectId, data.chats, data.quizzes, data.wrongQuestions, readyMaterials, subject])
+
+  useEffect(() => {
+    if (!dataLoaded || !agentInput) return
+    const saved = loadLearningAgentRun(agentInput.subjectId)
+    const shouldReplan = !saved ||
+      (saved.status === 'blocked' && (agentInput.quizzes.length > 0 || agentInput.wrongQuestions.length > 0))
+    const next = shouldReplan
+      ? createLearningAgentRun(agentInput)
+      : reconcileLearningAgentRun(saved, agentInput)
+    saveLearningAgentRun(next)
+    setAgentRun(next)
+  }, [agentInput, dataLoaded])
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) || graph.nodes[0]
-  const mastered = mastery.filter((item) => item.status === 'mastered').length
-  const evaluated = mastery.filter((item) => item.attempts > 0).length
-  const masteryRows = studentModel.trajectories.length
-    ? studentModel.trajectories.map((item) => ({
-        id: item.chapter,
-        title: item.chapter,
-        status: (item.mastery < 50 ? 'weak' : item.mastery < 80 ? 'developing' : 'mastered') as MasteryStatus,
-        attempts: item.attempts,
-        confidence: Math.min(100, Math.round((1 - Math.exp(-item.attempts / 3)) * 100)),
-        score: item.mastery,
-        detail: `遗忘风险 ${item.forgettingRisk}% · ${item.trend >= 0 ? '进步' : '回落'} ${Math.abs(item.trend)}% · 下次 ${item.nextDifficulty}`,
-      }))
-    : mastery.map((item) => ({
+  const mastered = decisionMastery.filter((item) => item.status === 'mastered').length
+  const evaluated = decisionMastery.filter((item) => item.attempts > 0).length
+  const masteryRows = knowledgeTracing.trajectories.length
+    ? knowledgeTracing.trajectories.map((item) => {
+        const baseline = studentModel.trajectories.find((candidate) => candidate.chapter === item.chapter)
+        return {
+          id: item.chapter,
+          title: item.chapter,
+          status: (item.mastery < 50 ? 'weak' : item.mastery < 80 ? 'developing' : 'mastered') as MasteryStatus,
+          attempts: item.attempts,
+          confidence: item.confidence,
+          score: item.mastery,
+          detail: `下题答对 ${item.predictedCorrect}% · 置信 ${item.confidence}% · 经验基线 ${baseline?.mastery ?? '--'}% · 下次 ${item.nextDifficulty}`,
+        }
+      })
+    : decisionMastery.map((item) => ({
         ...item,
         detail: `${STATUS_LABEL[item.status]} · ${item.attempts} 次证据 · 置信度 ${item.confidence}%`,
       }))
 
   const handleBenchmark = () => {
     if (!currentSubjectId || chunks.length === 0) return
-    const result = runRagBenchmark(
+    const result = runRagAblation(
       chunks,
       buildRagEvaluationCases(chunks, 16),
       currentSubjectId,
     )
-    setBenchmark(result)
-    localStorage.setItem(`cs_rag_benchmark:${currentSubjectId}`, JSON.stringify(result))
+    const best = result.benchmarks.find((item) => item.strategy === result.bestStrategy) || null
+    setAblation(result)
+    setBenchmark(best)
+    localStorage.setItem(`cs_rag_ablation:v2:${currentSubjectId}`, JSON.stringify(result))
   }
 
   const enhanceGraph = async () => {
@@ -203,6 +283,41 @@ export default function LearningLab() {
       if (node) askNode(node)
       else navigate('/chat')
     }
+  }
+
+  const replanAgent = () => {
+    if (!agentInput) return
+    const next = createLearningAgentRun(agentInput)
+    saveLearningAgentRun(next)
+    setAgentRun(next)
+  }
+
+  const executeAgentAction = () => {
+    if (!agentRun) return
+    const action = nextAgentAction(agentRun)
+    if (!action) return
+    const next = startNextAgentAction(agentRun)
+    saveLearningAgentRun(next)
+    setAgentRun(next)
+    useStore.getState().selectSubject(agentRun.subjectId)
+    if (action.kind === 'chat' && action.prompt) {
+      sessionStorage.setItem('cs_chat_prefill', action.prompt)
+      if (agentRun.evidence[0]) {
+        sessionStorage.setItem('cs_chat_material_id', agentRun.evidence[0].materialId)
+      }
+      navigate(action.path)
+      return
+    }
+    if (action.kind === 'quiz') {
+      navigate(action.path, {
+        state: {
+          adaptiveChapters: [action.chapter],
+          adaptiveDifficulty: agentRun.predictedCorrect && agentRun.predictedCorrect >= 70 ? '中档' : '基础',
+        },
+      })
+      return
+    }
+    navigate(action.path)
   }
 
   if (!currentSubjectId) {
@@ -265,13 +380,29 @@ export default function LearningLab() {
             <div>
               <span className="eyebrow">01 · Retrieval evaluation</span>
               <h3>RAG 检索基准与回答溯源</h3>
-              <p>从当前资料自动建立定位问题，计算目标片段是否出现在前 1、3、5 个结果中。</p>
+              <p>在同一批定位问题上对比 BM25、N-gram 与混合检索，原始排名直接用于 MRR。</p>
             </div>
             <button className="btn-outline" onClick={handleBenchmark}>
               <RefreshCw className="w-4 h-4" />
               {benchmark ? '重新评测' : '运行评测'}
             </button>
           </div>
+
+          {ablation && (
+            <div className="ablation-grid" aria-label="检索策略消融实验">
+              {ablation.benchmarks.map((item) => (
+                <div
+                  className={cn('ablation-card', item.strategy === ablation.bestStrategy && 'is-best')}
+                  key={item.strategy}
+                >
+                  <span>{RETRIEVAL_LABEL[item.strategy]}</span>
+                  <strong>Hit@3 {item.hitAt3}%</strong>
+                  <small>MRR {item.meanReciprocalRank}% · {item.durationMs} ms</small>
+                  {item.strategy === ablation.bestStrategy && <em>当前最佳</em>}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="lab-metric-grid">
             <LabMetric value={benchmark ? `${benchmark.hitAt1}%` : '--'} label="Hit@1" />
@@ -296,7 +427,7 @@ export default function LearningLab() {
                 </div>
               ))}
               <p className="benchmark-note">
-                共 {benchmark.caseCount} 个用例 · 覆盖 {benchmark.materialCoverage}% 的资料 · 本地运行 {benchmark.durationMs} ms
+                共 {benchmark.caseCount} 个自动生成自检用例 · 覆盖 {benchmark.materialCoverage}% 的资料 · 当前最佳 {RETRIEVAL_LABEL[benchmark.strategy]}
               </p>
             </div>
           ) : (
@@ -356,7 +487,7 @@ export default function LearningLab() {
           <div className="knowledge-map-layout">
             <div className="knowledge-node-list">
               {graph.nodes.slice(0, 40).map((node) => {
-                const nodeMastery = mastery.find((item) => item.id === node.id)
+                const nodeMastery = decisionMastery.find((item) => item.id === node.id)
                 return (
                   <button
                     key={node.id}
@@ -414,10 +545,35 @@ export default function LearningLab() {
             <div>
               <span className="eyebrow">03 · Adaptive learning</span>
               <h3>掌握度与今日学习路径</h3>
-              <p>综合正确率、作答时间、记录新鲜度和证据数量计算，不再只看一次考试分数。</p>
+              <p>BKT 按作答序列逐次更新掌握概率，并与原有经验正确率模型做严格时序预测对照。</p>
             </div>
             <span className="lab-badge"><Route className="w-3.5 h-3.5" /> 预计 {plan.reduce((sum, item) => sum + item.minutes, 0)} 分钟</span>
           </div>
+
+          {knowledgeTracing.evaluation.sampleCount > 0 && (
+            <div className="kt-comparison">
+              <div>
+                <span>严格时序评测</span>
+                <strong>{knowledgeTracing.evaluation.sampleCount} 次作答</strong>
+                <small>每次预测只使用当时之前的记录</small>
+              </div>
+              <div className={cn(knowledgeTracing.evaluation.winner === 'bkt' && 'is-winner')}>
+                <span>BKT</span>
+                <strong>{knowledgeTracing.evaluation.bkt.brierScore.toFixed(3)}</strong>
+                <small>Brier ↓ · 准确率 {knowledgeTracing.evaluation.bkt.accuracy}%</small>
+              </div>
+              <div className={cn(knowledgeTracing.evaluation.winner === 'heuristic' && 'is-winner')}>
+                <span>经验基线</span>
+                <strong>{knowledgeTracing.evaluation.heuristicBaseline.brierScore.toFixed(3)}</strong>
+                <small>Brier ↓ · 准确率 {knowledgeTracing.evaluation.heuristicBaseline.accuracy}%</small>
+              </div>
+              <div>
+                <span>校准误差</span>
+                <strong>{knowledgeTracing.evaluation.bkt.calibrationError.toFixed(3)}</strong>
+                <small>BKT ECE ↓ · {knowledgeTracing.evaluation.winner === 'tie' ? '两者接近' : knowledgeTracing.evaluation.winner === 'bkt' ? 'BKT 更优' : '基线更优'}</small>
+              </div>
+            </div>
+          )}
 
           <div className="adaptive-layout">
             <div className="mastery-list">
@@ -459,6 +615,75 @@ export default function LearningLab() {
             </div>
           )}
         </section>
+
+        {agentRun && (
+          <section className="panel p-5 agent-orchestrator">
+            <div className="lab-section-heading">
+              <div>
+                <span className="eyebrow">04 · Observable learning agent</span>
+                <h3>可观察学习 Agent</h3>
+                <p>每一步都保留数据依据、课件证据和状态转移；未验证前不会自动宣称已掌握。</p>
+              </div>
+              <div className="page-actions">
+                <span className={cn('lab-badge', agentRun.status === 'blocked' && 'has-risk')}>
+                  <BrainCircuit className="w-3.5 h-3.5" />
+                  {agentRun.status === 'complete' ? '闭环已完成' : agentRun.status === 'blocked' ? '安全阻断' : agentRun.status === 'waiting_verification' ? '等待验证' : '计划就绪'}
+                </span>
+                <button className="btn-outline" onClick={replanAgent}>
+                  <RefreshCw className="w-4 h-4" /> 重新规划
+                </button>
+              </div>
+            </div>
+
+            <div className="agent-summary">
+              <div><span>目标知识点</span><strong>{agentRun.chapter || '待收集数据'}</strong></div>
+              <div><span>诊断</span><strong>{agentRun.diagnosisLabel || '暂无'}</strong></div>
+              <div><span>BKT 掌握变化</span><strong>{agentRun.masteryBefore ?? '--'}% → {agentRun.masteryAfter ?? '待验证'}{typeof agentRun.masteryAfter === 'number' ? '%' : ''}</strong></div>
+              <div><span>证据</span><strong>{agentRun.evidence.length} 条</strong></div>
+            </div>
+
+            <div className="agent-trace">
+              {agentRun.trace.map((item, index) => (
+                <div className={cn('agent-trace-step', `is-${item.status}`)} key={item.state}>
+                  <span className="agent-trace-index">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="agent-trace-dot">
+                    {item.status === 'completed' ? <CheckCircle2 className="w-4 h-4" /> : item.status === 'blocked' ? <ShieldAlert className="w-4 h-4" /> : <CircleDot className="w-4 h-4" />}
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.reasoning}</p>
+                    {item.evidence.length > 0 && <small>{item.evidence.join(' · ')}</small>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {agentRun.evidence.length > 0 && (
+              <div className="agent-evidence-grid">
+                {agentRun.evidence.map((item) => (
+                  <article key={`${item.materialId}:${item.locator}`}>
+                    <span>{item.score}% 相关</span>
+                    <strong>{item.materialName}</strong>
+                    <small>{item.locator}</small>
+                    <p>{item.excerpt}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            <div className="agent-footer">
+              <div>
+                <strong>安全约束</strong>
+                <span>{agentRun.guardrails.join(' · ')}</span>
+              </div>
+              {nextAgentAction(agentRun) && (
+                <button className="btn-primary" onClick={executeAgentAction}>
+                  <Play className="w-4 h-4" /> {nextAgentAction(agentRun)?.label}
+                </button>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

@@ -17,6 +17,11 @@
     "lint": "eslint .",
     "check": "tsc -b --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "benchmark:rag": "tsx scripts/rag-benchmark.ts",
+    "scan:secrets": "tsx scripts/scan-secrets.ts",
+    "audit:secrets-history": "tsx scripts/scan-secrets.ts --history",
+    "check:bundle": "tsx scripts/check-bundle-budget.ts",
+    "smoke:production": "tsx scripts/smoke-production.ts",
     "package": "npm run build && electron-builder --win",
     "package:portable": "npm run build && electron-builder --win portable"
   },

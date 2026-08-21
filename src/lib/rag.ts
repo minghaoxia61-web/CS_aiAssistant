@@ -245,9 +245,99 @@ function ngramSimilarity(queryBigrams: string[], chunkBigramSet: Set<string>): n
   return matches / queryBigrams.length
 }
 
-interface ScoredChunk {
+/** 查询中被空白/标点分隔的单字知识点（如“树”、“图”）精确命中。 */
+function singleCharacterSimilarity(atoms: string[], text: string): number {
+  if (!atoms.length) return 0
+  return atoms.filter((item) => text.includes(item)).length / atoms.length
+}
+
+export type RetrievalStrategy = 'bm25' | 'ngram' | 'lexical-hybrid' | 'semantic-hybrid'
+
+export interface ScoredChunk {
   chunk: Chunk
   score: number
+}
+
+export interface RankChunksOptions {
+  subjectId?: string
+  strategy?: RetrievalStrategy
+  chunkVectors?: Map<string, Float32Array>
+  queryVector?: Float32Array
+}
+
+/**
+ * 对候选分块进行纯排序，不执行资料多样化或 token 截断。
+ * 对话检索在此结果上做预算控制；离线评测直接使用原始排名，避免展示顺序污染 MRR。
+ */
+export function rankChunks(
+  chunks: Chunk[],
+  query: string,
+  options: RankChunksOptions = {},
+): ScoredChunk[] {
+  const {
+    subjectId,
+    strategy = 'lexical-hybrid',
+    chunkVectors,
+    queryVector,
+  } = options
+  const candidates = subjectId ? chunks.filter((chunk) => chunk.subjectId === subjectId) : chunks
+  if (candidates.length === 0) return []
+
+  const queryTokens = tokenize(query)
+  const queryBigrams = charBigrams(query)
+  const querySingleCharacters = (query.match(/[\u4e00-\u9fff]+/g) || [])
+    .filter((item) => item.length === 1 && !STOP_WORDS.has(item))
+  const queryTF = termFreq(queryTokens)
+  const prepared = candidates.map((chunk) => {
+    const tokens = tokenize(chunk.text)
+    return {
+      chunk,
+      tf: termFreq(tokens),
+      bigramSet: new Set(charBigrams(chunk.text)),
+      len: tokens.length,
+    }
+  })
+  const df = new Map<string, number>()
+  for (const item of prepared) {
+    for (const token of item.tf.keys()) df.set(token, (df.get(token) || 0) + 1)
+  }
+  const count = prepared.length
+  const averageLength = prepared.reduce((sum, item) => sum + item.len, 0) / (count || 1)
+  const vectorsAvailable = Boolean(chunkVectors?.size && queryVector)
+  const raw = prepared.map((item) => {
+    const vector = vectorsAvailable
+      ? chunkVectors?.get(`${item.chunk.materialId}:${item.chunk.index}`)
+      : undefined
+    return {
+      chunk: item.chunk,
+      bm25: bm25Score(queryTF, item.tf, item.len, averageLength, df, count),
+      ngram: ngramSimilarity(queryBigrams, item.bigramSet),
+      singleCharacter: singleCharacterSimilarity(querySingleCharacters, item.chunk.text),
+      vector: vector && queryVector ? cosineSimilarity(queryVector, vector) : 0,
+    }
+  })
+  const maxBm25 = Math.max(...raw.map((item) => item.bm25), 1e-9)
+  const maxNgram = Math.max(...raw.map((item) => item.ngram), 1e-9)
+  const maxVector = Math.max(...raw.map((item) => item.vector), 1e-9)
+  const effectiveStrategy = strategy === 'semantic-hybrid' && !vectorsAvailable
+    ? 'lexical-hybrid'
+    : strategy
+
+  return raw
+    .map(({ chunk, bm25, ngram, singleCharacter, vector }) => {
+      const normalizedBm25 = bm25 / maxBm25
+      const normalizedNgram = Math.max(ngram / maxNgram, singleCharacter)
+      const normalizedVector = vector / maxVector
+      const score = effectiveStrategy === 'bm25'
+        ? normalizedBm25
+        : effectiveStrategy === 'ngram'
+          ? normalizedNgram
+          : effectiveStrategy === 'semantic-hybrid'
+            ? BM25_IN_HYBRID * normalizedBm25 + VECTOR_WEIGHT * normalizedVector
+            : BM25_WEIGHT * normalizedBm25 + NGRAM_WEIGHT * normalizedNgram
+      return { chunk, score }
+    })
+    .sort((a, b) => b.score - a.score)
 }
 
 /**
@@ -295,60 +385,12 @@ export function retrieveChunks(
     return result
   }
 
-  const queryTF = termFreq(queryTokens)
-
-  // 预计算每个 chunk 的 token、TF、bigram、长度
-  const prepared = candidates.map((chunk) => {
-    const tokens = tokenize(chunk.text)
-    const bigrams = charBigrams(chunk.text)
-    return {
-      chunk,
-      tf: termFreq(tokens),
-      bigramSet: new Set(bigrams),
-      len: tokens.length,
-    }
+  const scored = rankChunks(chunks, query, {
+    subjectId,
+    strategy: chunkVectors?.size && queryVector ? 'semantic-hybrid' : 'lexical-hybrid',
+    chunkVectors,
+    queryVector,
   })
-
-  // 计算 DF（在候选集合中）
-  const df = new Map<string, number>()
-  for (const p of prepared) {
-    for (const t of p.tf.keys()) {
-      df.set(t, (df.get(t) || 0) + 1)
-    }
-  }
-  const N = prepared.length
-  const avgdl = prepared.reduce((sum, p) => sum + p.len, 0) / (N || 1)
-
-  // 是否启用向量语义召回
-  const useVectors = !!(chunkVectors && chunkVectors.size > 0 && queryVector)
-
-  // 计算 BM25 + n-gram（+ 向量）原始分数
-  const rawScored = prepared.map((p) => {
-    const bm25 = bm25Score(queryTF, p.tf, p.len, avgdl, df, N)
-    const ngram = ngramSimilarity(queryBigrams, p.bigramSet)
-    let vec = 0
-    if (useVectors) {
-      const v = chunkVectors!.get(`${p.chunk.materialId}:${p.chunk.index}`)
-      if (v) vec = cosineSimilarity(queryVector!, v)
-    }
-    return { chunk: p.chunk, bm25, ngram, vec }
-  })
-
-  // 归一化到 [0, 1]（除以最大值），便于加权融合
-  const maxBm25 = Math.max(...rawScored.map((s) => s.bm25), 1e-9)
-  const maxNgram = Math.max(...rawScored.map((s) => s.ngram), 1e-9)
-  const maxVec = Math.max(...rawScored.map((s) => s.vec), 1e-9)
-
-  // 混合召回：有向量 → 0.4*BM25 + 0.6*向量；无向量 → 0.7*BM25 + 0.3*n-gram（降级）
-  const scored: ScoredChunk[] = rawScored.map((s) => ({
-    chunk: s.chunk,
-    score: useVectors
-      ? BM25_IN_HYBRID * (s.bm25 / maxBm25) + VECTOR_WEIGHT * (s.vec / maxVec)
-      : BM25_WEIGHT * (s.bm25 / maxBm25) + NGRAM_WEIGHT * (s.ngram / maxNgram),
-  }))
-
-  // 按分数降序
-  scored.sort((a, b) => b.score - a.score)
 
   // 多样化策略：先从每份资料取最高分的 1 个分块（轮询），确保全覆盖
   const picked: Chunk[] = []

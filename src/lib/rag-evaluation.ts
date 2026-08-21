@@ -1,12 +1,22 @@
 import type { ChatSession } from '@/shared/types'
-import { chunkLocator, retrieveChunks, type Chunk } from './rag'
+import {
+  chunkLocator,
+  rankChunks,
+  type Chunk,
+  type RetrievalStrategy,
+} from './rag'
 
 export interface RagEvaluationCase {
   id: string
   query: string
   expectedMaterialId: string
-  expectedChunkIndex: number
+  expectedChunkIndex?: number
+  /** 人工标注集可用关键证据锁定片段，避免分块参数变化使 chunk index 失效。 */
+  expectedEvidence?: string
   sourceLabel: string
+  /** human = 人工标注金标集；generated = 从资料自动生成的快速自检 */
+  provenance?: 'human' | 'generated'
+  category?: string
 }
 
 export interface RagCaseResult extends RagEvaluationCase {
@@ -23,7 +33,16 @@ export interface RagBenchmark {
   meanReciprocalRank: number
   materialCoverage: number
   durationMs: number
+  strategy: RetrievalStrategy
+  provenance: 'human' | 'generated' | 'mixed'
   results: RagCaseResult[]
+}
+
+export interface RagAblationResult {
+  createdAt: number
+  caseCount: number
+  benchmarks: RagBenchmark[]
+  bestStrategy: RetrievalStrategy
 }
 
 export interface GroundingStats {
@@ -71,6 +90,7 @@ export function buildRagEvaluationCases(chunks: Chunk[], limit = 16): RagEvaluat
     expectedMaterialId: chunk.materialId,
     expectedChunkIndex: chunk.index,
     sourceLabel: `${chunk.materialName} · ${chunkLocator(chunk)}`,
+    provenance: 'generated',
   }))
 }
 
@@ -78,15 +98,18 @@ export function runRagBenchmark(
   chunks: Chunk[],
   cases = buildRagEvaluationCases(chunks),
   subjectId?: string,
+  strategy: RetrievalStrategy = 'lexical-hybrid',
 ): RagBenchmark {
   const startedAt = performance.now()
   const results = cases.map<RagCaseResult>((item) => {
-    const retrieved = retrieveChunks(chunks, item.query, 12_000, subjectId, 5, 1)
-    const rankIndex = retrieved.findIndex(
-      (chunk) =>
-        chunk.materialId === item.expectedMaterialId &&
-        chunk.index === item.expectedChunkIndex,
-    )
+    const retrieved = rankChunks(chunks, item.query, { subjectId, strategy })
+      .slice(0, 5)
+      .map((result) => result.chunk)
+    const rankIndex = retrieved.findIndex((chunk) => {
+      if (chunk.materialId !== item.expectedMaterialId) return false
+      if (item.expectedEvidence) return chunk.text.includes(item.expectedEvidence)
+      return item.expectedChunkIndex === undefined || chunk.index === item.expectedChunkIndex
+    })
     return {
       ...item,
       rank: rankIndex >= 0 ? rankIndex + 1 : null,
@@ -105,6 +128,7 @@ export function runRagBenchmark(
       .filter((item) => item.rank !== null)
       .map((item) => item.expectedMaterialId),
   )
+  const provenances = new Set(cases.map((item) => item.provenance || 'generated'))
 
   return {
     createdAt: Date.now(),
@@ -117,7 +141,32 @@ export function runRagBenchmark(
       ? Math.round((hitMaterials.size / expectedMaterials.size) * 100)
       : 0,
     durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+    strategy,
+    provenance: provenances.size > 1
+      ? 'mixed'
+      : (provenances.values().next().value || 'generated'),
     results,
+  }
+}
+
+/** 在完全相同的数据与用例上运行消融实验。 */
+export function runRagAblation(
+  chunks: Chunk[],
+  cases = buildRagEvaluationCases(chunks),
+  subjectId?: string,
+  strategies: RetrievalStrategy[] = ['bm25', 'ngram', 'lexical-hybrid'],
+): RagAblationResult {
+  const benchmarks = strategies.map((strategy) =>
+    runRagBenchmark(chunks, cases, subjectId, strategy),
+  )
+  const best = [...benchmarks].sort((a, b) =>
+    b.meanReciprocalRank - a.meanReciprocalRank || b.hitAt3 - a.hitAt3,
+  )[0]
+  return {
+    createdAt: Date.now(),
+    caseCount: cases.length,
+    benchmarks,
+    bestStrategy: best?.strategy || 'lexical-hybrid',
   }
 }
 

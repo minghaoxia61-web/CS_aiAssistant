@@ -18,5 +18,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run check
+      - run: npm run scan:secrets
       - run: npm test
+      - run: npm run benchmark:rag
       - run: npm run build:web
+      - run: npm run check:bundle
+      - run: npm run smoke:production

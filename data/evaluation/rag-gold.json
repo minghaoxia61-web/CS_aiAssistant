@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "description": "人工编写的计算机基础 RAG 检索金标集，问题不由被评测文本自动生成。",
+  "cases": [
+    {
+      "id": "os-process-unit",
+      "query": "操作系统中资源分配和 CPU 调度的最小单位分别是什么？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "线程是进程内的一个执行单元",
+      "sourceLabel": "进程与线程 · 线程的概念",
+      "category": "concept",
+      "provenance": "human"
+    },
+    {
+      "id": "os-process-states",
+      "query": "进程等待 I/O 时会发生哪个状态转换？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "运行→阻塞（等待 I/O）",
+      "sourceLabel": "进程与线程 · 进程状态",
+      "category": "reasoning",
+      "provenance": "human"
+    },
+    {
+      "id": "os-ipc-fastest",
+      "query": "多个进程需要高性能交换大量数据，哪种 IPC 通常最快，又需要额外注意什么？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "共享内存",
+      "sourceLabel": "进程与线程 · IPC",
+      "category": "scenario",
+      "provenance": "human"
+    },
+    {
+      "id": "os-cow",
+      "query": "fork 如何避免在创建子进程时立即复制所有物理页？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "写时复制",
+      "sourceLabel": "进程与线程 · fork",
+      "category": "mechanism",
+      "provenance": "human"
+    },
+    {
+      "id": "os-tlb",
+      "query": "CPU 用什么缓存来加速虚拟地址到物理地址的翻译？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "TLB（Translation Lookaside Buffer）",
+      "sourceLabel": "内存管理 · TLB",
+      "category": "concept",
+      "provenance": "human"
+    },
+    {
+      "id": "os-belady",
+      "query": "增加页框数却可能让缺页率变高，这个反常现象出现在哪种置换算法中？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "Belady 异常",
+      "sourceLabel": "内存管理 · FIFO",
+      "category": "concept",
+      "provenance": "human"
+    },
+    {
+      "id": "os-lru-vs-lfu",
+      "query": "一个页面过去很热门但最近已经不再使用，哪种置换算法可能长期保留它？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "历史高频页面长期占用",
+      "sourceLabel": "内存管理 · LFU",
+      "category": "scenario",
+      "provenance": "human"
+    },
+    {
+      "id": "os-mmap",
+      "query": "如何把文件直接映射到进程虚拟地址空间，从而减少显式 read/write？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "mmap",
+      "sourceLabel": "内存管理 · mmap",
+      "category": "scenario",
+      "provenance": "human"
+    },
+    {
+      "id": "db-acid-rollback",
+      "query": "转账中任一步失败就要全部回滚，这对应 ACID 的哪个特性？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "原子性",
+      "sourceLabel": "事务 · ACID",
+      "category": "scenario",
+      "provenance": "human"
+    },
+    {
+      "id": "db-isolation-phantom",
+      "query": "同一事务两次范围查询的行数不同，这种并发异常叫什么？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "幻读",
+      "sourceLabel": "事务 · 隔离级别",
+      "category": "concept",
+      "provenance": "human"
+    },
+    {
+      "id": "db-redo-undo",
+      "query": "数据库崩溃恢复和事务回滚分别依赖什么日志？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "redo log vs undo log",
+      "sourceLabel": "事务 · 日志",
+      "category": "comparison",
+      "provenance": "human"
+    },
+    {
+      "id": "db-mvcc",
+      "query": "MySQL 如何让普通读操作不阻塞写操作？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "MVCC（多版本并发控制）",
+      "sourceLabel": "事务 · MVCC",
+      "category": "mechanism",
+      "provenance": "human"
+    },
+    {
+      "id": "net-handshake-two",
+      "query": "TCP 建立连接为什么不能只使用两次握手？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "防止已失效的连接请求",
+      "sourceLabel": "TCP 与 UDP · 三次握手",
+      "category": "reasoning",
+      "provenance": "human"
+    },
+    {
+      "id": "net-time-wait",
+      "query": "主动关闭 TCP 连接的一方为什么要在 TIME_WAIT 中等待 2MSL？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "确保最后一个 ACK 能到达对端",
+      "sourceLabel": "TCP 与 UDP · 四次挥手",
+      "category": "reasoning",
+      "provenance": "human"
+    },
+    {
+      "id": "net-window",
+      "query": "TCP 发送窗口的上限由接收端缓冲能力和哪个拥塞参数共同决定？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "发送窗口 = min",
+      "sourceLabel": "TCP 与 UDP · 滑动窗口",
+      "category": "mechanism",
+      "provenance": "human"
+    },
+    {
+      "id": "net-fast-retransmit",
+      "query": "TCP 连续收到三个重复 ACK 后会立即执行什么操作？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "快重传",
+      "sourceLabel": "TCP 与 UDP · 拥塞控制",
+      "category": "mechanism",
+      "provenance": "human"
+    }
+  ]
+}

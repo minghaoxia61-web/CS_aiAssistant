@@ -426,7 +426,7 @@ export default function Setup() {
               <div className="flex-1">
                 <p className="text-sm text-bone mb-1">一键加载"数据结构"示例科目</p>
                 <p className="text-xs text-bone-muted leading-relaxed">
-                  预置 4 份真实 PDF 课件（绪论、栈与队列、树、动态规划）+ 1 次测验（含 3 道错题）+ 1 条对话记录 + 1 份复习摘要。
+                  预置 4 份课件（绪论、栈与队列、树、动态规划）+ 1 次测验（含 3 道错题）+ 1 条对话记录 + 1 份复习摘要。PDF 缺失或离线时会自动使用内置文本。
                   加载后可直接体验 AI 问答、RAG 检索、SOLO Agent 主动推送等全部功能。
                 </p>
               </div>
