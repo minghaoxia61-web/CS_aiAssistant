@@ -10,7 +10,7 @@
     "dev": "concurrently -k -n VITE,ELECTRON \"vite\" \"npm run build:electron -- --watch\" \"wait-on http://localhost:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "dev:web": "concurrently -k -n VITE,SERVER \"vite --mode web\" \"wait-on http://localhost:5173 && cross-env DATA_DIR=./data-dev tsx server/index.ts\"",
     "build:electron": "tsc -p tsconfig.electron.json",
-    "build:web": "vite build --mode web && tsc -p tsconfig.server.json && node scripts/copy-knowledge.cjs",
+    "build:web": "node scripts/generate-static-api.cjs && vite build --mode web && tsc -p tsconfig.server.json && node scripts/copy-knowledge.cjs",
     "start:web": "node dist-server/server/index.js",
     "build": "vite build && npm run build:electron",
     "preview": "vite preview",

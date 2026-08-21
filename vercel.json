@@ -1,16 +1,23 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "vite build --mode web",
+  "buildCommand": "node scripts/generate-static-api.cjs && vite build --mode web",
   "outputDirectory": "dist",
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/knowledge/**"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index?route=:path*"
+      "source": "/api/config",
+      "destination": "/api-data/config.json"
+    },
+    {
+      "source": "/api/knowledge/catalog",
+      "destination": "/api-data/catalog.json"
+    },
+    {
+      "source": "/api/knowledge/:category/:slug",
+      "destination": "/api-data/articles/:category/:slug.json"
+    },
+    {
+      "source": "/api/knowledge",
+      "destination": "/api-data/knowledge.json"
     }
   ]
 }

@@ -267,7 +267,7 @@ npm run audit:secrets-history
 | 异步计算 | Web Worker + Worker 池 |
 | PWA | Service Worker + Web App Manifest |
 | 后端 | Express + Multer（纯 LLM 代理） |
-| 部署 | Vercel（前端 + Express Function）；Railway 配置可选 |
+| 部署 | Vercel（前端 + 静态知识 API）；Express/Railway 模型代理可选 |
 
 ## 项目结构
 
@@ -307,7 +307,7 @@ src/
 
 ### Vercel 前端部署
 
-仓库包含 `vercel.json`，连接 GitHub 后会自动构建 `vite build --mode web`。启用云同步时，同时在 Vercel 配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`。
+仓库包含 `vercel.json`，连接 GitHub 后会自动构建前端与只读静态知识 API。在线演示的 RAG、BKT 和 Agent 闭环在浏览器本地运行；真实 LLM 转发需额外部署 Express 服务。启用云同步时，同时在 Vercel 配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`。
 
 ### 本地 Electron 桌面应用
 

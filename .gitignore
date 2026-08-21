@@ -15,6 +15,7 @@ dist-server
 data/*
 !data/evaluation/
 !data/evaluation/rag-gold.json
+public/api-data/
 data-dev
 data-test
 data-prod-test
