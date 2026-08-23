@@ -3,7 +3,7 @@
 import * as https from 'https';
 import * as http from 'http';
 import type { ApiConfig, LlmMessage, LlmStructuredKind } from '../src/shared/types';
-import { executeStructuredWithRepair } from '../src/lib/structured-output';
+import { executeStructuredWithRepair } from '../src/lib/structured-output.js';
 
 export interface StreamCallbacks {
   onToken: (token: string) => void;

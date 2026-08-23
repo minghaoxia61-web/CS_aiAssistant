@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { chatStructuredJSON } from '../../electron/llm'
-import { resolveLlmConfig } from '../../server/llm-config'
+import { chatStructuredJSON } from '../../electron/llm.js'
+import { resolveLlmConfig } from '../../server/llm-config.js'
 import type { ApiConfig, LlmStreamOptions } from '../../src/shared/types'
 
 interface FunctionRequest extends IncomingMessage { body?: unknown }
