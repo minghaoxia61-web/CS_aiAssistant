@@ -1,2 +1,4 @@
-// Vercel Node Function：复用 Express 中经过限流、域名白名单和密钥隔离的 LLM 路由。
-export { default } from '../../server/llm-app'
+// Vercel Node Function：复用经过域名白名单和密钥隔离的最小 LLM 应用。
+import app from '../../server/llm-app'
+
+export default app
