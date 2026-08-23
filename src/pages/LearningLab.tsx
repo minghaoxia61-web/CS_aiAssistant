@@ -380,7 +380,7 @@ export default function LearningLab() {
             <div>
               <span className="eyebrow">01 · Retrieval evaluation</span>
               <h3>RAG 检索基准与回答溯源</h3>
-              <p>在同一批定位问题上对比 BM25、N-gram 与混合检索，原始排名直接用于 MRR。</p>
+              <p>在同一批定位问题上对比 BM25、N-gram 与混合检索，统计 MRR、Recall@5 与 nDCG@5。</p>
             </div>
             <button className="btn-outline" onClick={handleBenchmark}>
               <RefreshCw className="w-4 h-4" />
@@ -397,7 +397,7 @@ export default function LearningLab() {
                 >
                   <span>{RETRIEVAL_LABEL[item.strategy]}</span>
                   <strong>Hit@3 {item.hitAt3}%</strong>
-                  <small>MRR {item.meanReciprocalRank}% · {item.durationMs} ms</small>
+                  <small>MRR {item.meanReciprocalRank}% · nDCG {item.ndcgAt5}% · {item.durationMs} ms</small>
                   {item.strategy === ablation.bestStrategy && <em>当前最佳</em>}
                 </div>
               ))}
@@ -409,6 +409,11 @@ export default function LearningLab() {
             <LabMetric value={benchmark ? `${benchmark.hitAt3}%` : '--'} label="Hit@3" />
             <LabMetric value={benchmark ? `${benchmark.hitAt5}%` : '--'} label="Hit@5" />
             <LabMetric value={benchmark ? `${benchmark.meanReciprocalRank}%` : '--'} label="MRR" />
+            <LabMetric value={benchmark ? `${benchmark.recallAt5}%` : '--'} label="Recall@5" />
+            <LabMetric value={benchmark ? `${benchmark.ndcgAt5}%` : '--'} label="nDCG@5" />
+            {benchmark?.unanswerableCount ? (
+              <LabMetric value={`${benchmark.answerabilityAccuracy}%`} label="可回答性判断" />
+            ) : null}
             <LabMetric value={`${answerQuality.evidenceAlignment}%`} label="答案证据一致性" />
             <LabMetric value={`${answerQuality.citationValidity}%`} label="引用有效率" />
           </div>
@@ -427,7 +432,7 @@ export default function LearningLab() {
                 </div>
               ))}
               <p className="benchmark-note">
-                共 {benchmark.caseCount} 个自动生成自检用例 · 覆盖 {benchmark.materialCoverage}% 的资料 · 当前最佳 {RETRIEVAL_LABEL[benchmark.strategy]}
+                共 {benchmark.caseCount} 个当前科目自检用例 · 覆盖 {benchmark.materialCoverage}% 的资料 · 当前最佳 {RETRIEVAL_LABEL[benchmark.strategy]}
               </p>
             </div>
           ) : (
@@ -555,7 +560,11 @@ export default function LearningLab() {
               <div>
                 <span>严格时序评测</span>
                 <strong>{knowledgeTracing.evaluation.sampleCount} 次作答</strong>
-                <small>每次预测只使用当时之前的记录</small>
+                <small>{knowledgeTracing.calibration.status === 'fitted'
+                  ? `参数已拟合 · 留出集 Log Loss 改善 ${knowledgeTracing.calibration.logLossImprovement?.toFixed(3)}`
+                  : knowledgeTracing.calibration.status === 'fallback_no_improvement'
+                    ? '拟合未改善留出集，已回退默认参数'
+                    : '样本不足，使用文献经验参数'}</small>
               </div>
               <div className={cn(knowledgeTracing.evaluation.winner === 'bkt' && 'is-winner')}>
                 <span>BKT</span>

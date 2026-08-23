@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "node scripts/generate-static-api.cjs && vite build --mode web",
   "outputDirectory": "dist",
+  "functions": {
+    "api/llm/*.ts": {
+      "maxDuration": 120
+    }
+  },
   "rewrites": [
     {
       "source": "/api/config",

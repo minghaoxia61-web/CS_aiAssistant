@@ -238,6 +238,8 @@ export default function Quiz() {
           { role: 'user', content: prompt },
         ],
         temperature: 0.7,
+        responseKind: 'quiz',
+        expectedItems: count,
       })
       const arr = extractJSON(raw) as Partial<QuizQuestion>[]
       const qs: QuizQuestion[] = arr.map((q, i) => ({
@@ -343,6 +345,8 @@ export default function Quiz() {
             { role: 'user', content: buildGradePrompt(needGrade) },
           ],
           temperature: 0.2,
+          responseKind: 'grade',
+          expectedItems: needGrade.length,
         })
         const results = extractJSON(raw) as GradeResult[]
         graded = graded.map((q) => {

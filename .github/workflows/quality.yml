@@ -21,6 +21,9 @@ jobs:
       - run: npm run scan:secrets
       - run: npm test
       - run: npm run benchmark:rag
+      - run: npm run benchmark:agent
+      - run: npm run benchmark:bkt
+      - run: npm run benchmark:llm
       - run: npm run build:web
       - run: npm run check:bundle
       - run: npm run smoke:production

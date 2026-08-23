@@ -33,14 +33,20 @@ function loadGoldCorpus(): { chunks: Chunk[]; cases: RagEvaluationCase[] } {
 
 test('金标集的每条证据都能在指定资料中定位', () => {
   const { chunks, cases } = loadGoldCorpus()
+  assert.equal(cases.length, 100)
   for (const item of cases) {
-    assert.ok(
-      chunks.some((chunk) =>
-        chunk.materialId === item.expectedMaterialId &&
-        (!item.expectedEvidence || chunk.text.includes(item.expectedEvidence)),
-      ),
-      `missing gold evidence: ${item.id}`,
-    )
+    if (item.answerable === false) continue
+    const expected = item.expectedMaterialIds
+      ?? (item.expectedMaterialId ? [item.expectedMaterialId] : [])
+    assert.ok(expected.length > 0, `missing relevant material: ${item.id}`)
+    for (const materialId of expected) {
+      const evidence = item.expectedEvidenceByMaterial?.[materialId]
+        ?? (materialId === item.expectedMaterialId ? item.expectedEvidence : undefined)
+      assert.ok(
+        chunks.some((chunk) => chunk.materialId === materialId && (!evidence || chunk.text.includes(evidence))),
+        `missing gold evidence: ${item.id} -> ${materialId}`,
+      )
+    }
   }
 })
 
@@ -59,6 +65,10 @@ test('固定金标集上的混合检索质量不发生明显回退', () => {
   const result = runRagAblation(chunks, cases, 'gold-corpus')
   const hybrid = result.benchmarks.find((item) => item.strategy === 'lexical-hybrid')
   assert.ok(hybrid)
-  assert.ok(hybrid.hitAt3 >= 70, `Hit@3 regressed to ${hybrid.hitAt3}%`)
-  assert.ok(hybrid.meanReciprocalRank >= 60, `MRR regressed to ${hybrid.meanReciprocalRank}%`)
+  assert.ok(hybrid.hitAt3 >= 90, `Hit@3 regressed to ${hybrid.hitAt3}%`)
+  assert.ok(hybrid.meanReciprocalRank >= 85, `MRR regressed to ${hybrid.meanReciprocalRank}%`)
+  assert.ok(hybrid.recallAt5 >= 95, `Recall@5 regressed to ${hybrid.recallAt5}%`)
+  assert.ok(hybrid.ndcgAt5 >= 85, `nDCG@5 regressed to ${hybrid.ndcgAt5}%`)
+  assert.ok(hybrid.rejectionAccuracy >= 80, `rejection accuracy regressed to ${hybrid.rejectionAccuracy}%`)
+  assert.ok(hybrid.answerabilityAccuracy >= 80, `answerability accuracy regressed to ${hybrid.answerabilityAccuracy}%`)
 })

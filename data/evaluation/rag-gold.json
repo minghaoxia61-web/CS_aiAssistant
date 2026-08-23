@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "人工编写的计算机基础 RAG 检索金标集，问题不由被评测文本自动生成。",
+  "version": 2,
+  "description": "固定的计算机基础 RAG 评测集：16 条人工问题、64 条全语料覆盖问题、10 条跨资料问题和 10 条应拒答问题。",
   "cases": [
     {
       "id": "os-process-unit",
@@ -145,6 +145,783 @@
       "sourceLabel": "TCP 与 UDP · 拥塞控制",
       "category": "mechanism",
       "provenance": "human"
+    },
+    {
+      "id": "coverage-algo-divide-conquer-1",
+      "query": "在“分治算法”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "algo/divide-conquer.md",
+      "expectedEvidence": "分治法的三个步骤：",
+      "sourceLabel": "分治算法 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-divide-conquer-2",
+      "query": "如果需要解释分治与递归的关系，资料给出的关键要点是什么？",
+      "expectedMaterialId": "algo/divide-conquer.md",
+      "expectedEvidence": "分治是一种算法设计思想，递归是实现分治的常见手段。分治算法通常可表示为：",
+      "sourceLabel": "分治算法 · 分治与递归的关系",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-divide-conquer-3",
+      "query": "关于分治算法的主定理（Master Theorem），最应记住的结论是什么？",
+      "expectedMaterialId": "algo/divide-conquer.md",
+      "expectedEvidence": "用于分析分治算法的时间复杂度：",
+      "sourceLabel": "分治算法 · 主定理（Master Theorem）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-dp-1",
+      "query": "在“动态规划”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "algo/dp.md",
+      "expectedEvidence": "**最优子结构（Optimal Substructure）**：问题的最优解包含其子问题的最优解。",
+      "sourceLabel": "动态规划 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-dp-2",
+      "query": "如果需要解释动态规划的设计步骤，资料给出的关键要点是什么？",
+      "expectedMaterialId": "algo/dp.md",
+      "expectedEvidence": "**刻画最优解的结构特征**，确认具备最优子结构。",
+      "sourceLabel": "动态规划 · 动态规划的设计步骤",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-dp-3",
+      "query": "关于动态规划的适用问题类型，最应记住的结论是什么？",
+      "expectedMaterialId": "algo/dp.md",
+      "expectedEvidence": "最优化问题（最大值 / 最小值 / 最长 / 最短）。",
+      "sourceLabel": "动态规划 · 适用问题类型",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-greedy-1",
+      "query": "在“贪心算法”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "algo/greedy.md",
+      "expectedEvidence": "**贪心选择性质（Greedy Choice Property）**：问题的整体最优解可以通过一系列局部最优选择达到，即当前选择不依赖未来的",
+      "sourceLabel": "贪心算法 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-greedy-2",
+      "query": "如果需要解释贪心算法的一般步骤，资料给出的关键要点是什么？",
+      "expectedMaterialId": "algo/greedy.md",
+      "expectedEvidence": "将问题建模为若干阶段的选择。",
+      "sourceLabel": "贪心算法 · 贪心算法的一般步骤",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-greedy-3",
+      "query": "关于贪心算法的常见贪心策略，最应记住的结论是什么？",
+      "expectedMaterialId": "algo/greedy.md",
+      "expectedEvidence": "**按某个维度排序后逐个选取**：区间调度、活动选择。",
+      "sourceLabel": "贪心算法 · 常见贪心策略",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-searching-1",
+      "query": "在“搜索算法”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "algo/searching.md",
+      "expectedEvidence": "**顺序查找（Sequential Search）**：又称线性查找，从数据集合的一端开始，逐个比较关键字，直到找到目标或扫描完毕。",
+      "sourceLabel": "搜索算法 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-searching-2",
+      "query": "如果需要解释顺序查找，资料给出的关键要点是什么？",
+      "expectedMaterialId": "algo/searching.md",
+      "expectedEvidence": "适用于任何存储结构（顺序表、链表均可）。",
+      "sourceLabel": "搜索算法 · 顺序查找",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-searching-3",
+      "query": "关于搜索算法的二分查找，最应记住的结论是什么？",
+      "expectedMaterialId": "algo/searching.md",
+      "expectedEvidence": "前提条件：数据有序且支持随机访问（顺序表）。基本思路：",
+      "sourceLabel": "搜索算法 · 二分查找",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-sorting-1",
+      "query": "在“排序算法”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "algo/sorting.md",
+      "expectedEvidence": "排序算法（Sorting Algorithm）是指将一组数据按照特定顺序进行排列的算法。根据算法是否在原地进行，可分为内部排序（数据全部装入",
+      "sourceLabel": "排序算法 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-sorting-2",
+      "query": "如果需要解释算法特点简述，资料给出的关键要点是什么？",
+      "expectedMaterialId": "algo/sorting.md",
+      "expectedEvidence": "**冒泡排序**：相邻元素两两比较，每轮将最大（小）元素\"冒泡\"到末尾。可加 `flag` 优化提前退出。",
+      "sourceLabel": "排序算法 · 算法特点简述",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-algo-sorting-3",
+      "query": "关于排序算法的冒泡排序（C），最应记住的结论是什么？",
+      "expectedMaterialId": "algo/sorting.md",
+      "expectedEvidence": "void bubbleSort(int arr[], int n) {",
+      "sourceLabel": "排序算法 · 冒泡排序（C）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-index-1",
+      "query": "在“索引”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "db/index.md",
+      "expectedEvidence": "索引是数据库中用于加速查询的数据结构。类似书籍的目录，通过索引可以快速定位数据行，而无需全表扫描。",
+      "sourceLabel": "索引 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-index-2",
+      "query": "如果需要解释B+ 树索引（最常用），资料给出的关键要点是什么？",
+      "expectedMaterialId": "db/index.md",
+      "expectedEvidence": "[30 | 60]                    ← 根节点（非叶子）",
+      "sourceLabel": "索引 · B+ 树索引（最常用）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-index-3",
+      "query": "关于索引的哈希索引，最应记住的结论是什么？",
+      "expectedMaterialId": "db/index.md",
+      "expectedEvidence": "基于哈希表，等值查询 O(1)",
+      "sourceLabel": "索引 · 哈希索引",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-normalization-1",
+      "query": "在“数据库范式”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "db/normalization.md",
+      "expectedEvidence": "数据库范式（Normal Form）是关系型数据库设计的规范，用于减少数据冗余、消除异常（插入/更新/删除异常）。范式从低到高逐级约束，常见",
+      "sourceLabel": "数据库范式 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-normalization-2",
+      "query": "如果需要解释1NF（第一范式）— 原子性，资料给出的关键要点是什么？",
+      "expectedMaterialId": "db/normalization.md",
+      "expectedEvidence": "每个字段不可再分，是最基本的要求。",
+      "sourceLabel": "数据库范式 · 1NF（第一范式）— 原子性",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-normalization-3",
+      "query": "关于数据库范式的2NF（第二范式）— 消除部分依赖，最应记住的结论是什么？",
+      "expectedMaterialId": "db/normalization.md",
+      "expectedEvidence": "在 1NF 基础上，非主属性必须完全依赖于主键（不能只依赖主键的一部分）。",
+      "sourceLabel": "数据库范式 · 2NF（第二范式）— 消除部分依赖",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-sql-1",
+      "query": "在“SQL基础”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "db/sql.md",
+      "expectedEvidence": "SQL（Structured Query Language，结构化查询语言）是用于管理关系型数据库的标准语言。几乎所有主流数据库（MySQL",
+      "sourceLabel": "SQL基础 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-sql-2",
+      "query": "如果需要解释建表，资料给出的关键要点是什么？",
+      "expectedMaterialId": "db/sql.md",
+      "expectedEvidence": "-- 创建学生表",
+      "sourceLabel": "SQL基础 · 建表",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-sql-3",
+      "query": "关于SQL基础的增删改查（CRUD），最应记住的结论是什么？",
+      "expectedMaterialId": "db/sql.md",
+      "expectedEvidence": "INSERT INTO students (name, age, grade, class_id)",
+      "sourceLabel": "SQL基础 · 增删改查（CRUD）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-transaction-1",
+      "query": "在“事务”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "事务（Transaction）是数据库操作的逻辑单元，由一条或多条 SQL 语句组成。事务保证这些操作要么全部成功，要么全部失败回滚。",
+      "sourceLabel": "事务 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-transaction-2",
+      "query": "如果需要解释事务操作，资料给出的关键要点是什么？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "-- MySQL 事务示例：转账",
+      "sourceLabel": "事务 · 事务操作",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-db-transaction-3",
+      "query": "关于事务的隔离级别，最应记住的结论是什么？",
+      "expectedMaterialId": "db/transaction.md",
+      "expectedEvidence": "**脏读**：读到其他事务未提交的数据",
+      "sourceLabel": "事务 · 隔离级别",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-array-linkedlist-1",
+      "query": "在“数组与链表”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "ds/array-linkedlist.md",
+      "expectedEvidence": "**数组（Array）** 是一种线性数据结构，采用顺序存储方式，在内存中占用一段连续的空间，通过下标可以直接访问任意元素。",
+      "sourceLabel": "数组与链表 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-array-linkedlist-2",
+      "query": "如果需要解释时间复杂度对比，资料给出的关键要点是什么？",
+      "expectedMaterialId": "ds/array-linkedlist.md",
+      "expectedEvidence": "数组：访问 O(1)，查找 O(n)，插入 O(n)，删除 O(n)",
+      "sourceLabel": "数组与链表 · 时间复杂度对比",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-array-linkedlist-3",
+      "query": "关于数组与链表的动态数组，最应记住的结论是什么？",
+      "expectedMaterialId": "ds/array-linkedlist.md",
+      "expectedEvidence": "静态数组大小固定，动态数组（如 C++ 的 vector、Python 的 list）在容量不足时自动扩容：通常申请一块更大的连续空间（如 ",
+      "sourceLabel": "数组与链表 · 动态数组",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-graph-1",
+      "query": "在“图”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "ds/graph.md",
+      "expectedEvidence": "**图（Graph）** 由顶点集 V 和边集 E 组成，记作 G = (V, E)。图可分为：",
+      "sourceLabel": "图 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-graph-2",
+      "query": "如果需要解释图的存储，资料给出的关键要点是什么？",
+      "expectedMaterialId": "ds/graph.md",
+      "expectedEvidence": "**邻接矩阵**：用 n×n 二维数组 `a[i][j]` 表示边。无向图对称，查找 O(1)，但空间 O(n²)，适合稠密图。",
+      "sourceLabel": "图 · 图的存储",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-graph-3",
+      "query": "关于图的图的遍历，最应记住的结论是什么？",
+      "expectedMaterialId": "ds/graph.md",
+      "expectedEvidence": "**DFS（深度优先搜索）**：用栈/递归，沿一条路走到底再回溯。时间复杂度：邻接矩阵 O(n²)，邻接表 O(n+e)。",
+      "sourceLabel": "图 · 图的遍历",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-hash-table-1",
+      "query": "在“哈希表”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "ds/hash-table.md",
+      "expectedEvidence": "**哈希表（Hash Table）**，又称散列表，是根据关键字（key）直接进行访问的数据结构。它通过**哈希函数**把 key 映射到数",
+      "sourceLabel": "哈希表 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-hash-table-2",
+      "query": "如果需要解释哈希函数，资料给出的关键要点是什么？",
+      "expectedMaterialId": "ds/hash-table.md",
+      "expectedEvidence": "哈希函数 `h(key)` 将 key 映射到 `[0, m-1]` 的整数。常见构造方法：",
+      "sourceLabel": "哈希表 · 哈希函数",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-hash-table-3",
+      "query": "关于哈希表的冲突处理，最应记住的结论是什么？",
+      "expectedMaterialId": "ds/hash-table.md",
+      "expectedEvidence": "不同 key 可能映射到同一地址，称为**冲突**。常见处理方法：",
+      "sourceLabel": "哈希表 · 冲突处理",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-stack-queue-1",
+      "query": "在“栈与队列”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "ds/stack-queue.md",
+      "expectedEvidence": "**栈（Stack）** 是一种只允许在一端（栈顶）进行插入和删除的线性表，遵循 **后进先出（LIFO, Last In First Ou",
+      "sourceLabel": "栈与队列 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-stack-queue-2",
+      "query": "如果需要解释栈的实现方式，资料给出的关键要点是什么？",
+      "expectedMaterialId": "ds/stack-queue.md",
+      "expectedEvidence": "**顺序栈**：基于数组实现，用一个 `top` 指针记录栈顶位置。入栈 `++top`，出栈 `top--`。",
+      "sourceLabel": "栈与队列 · 栈的实现方式",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-stack-queue-3",
+      "query": "关于栈与队列的队列的实现方式，最应记住的结论是什么？",
+      "expectedMaterialId": "ds/stack-queue.md",
+      "expectedEvidence": "**顺序队列**：基于数组，但朴素实现会出现\"假溢出\"——队头之前的空间无法使用。",
+      "sourceLabel": "栈与队列 · 队列的实现方式",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-tree-1",
+      "query": "在“树与二叉树”中，概念定义的核心定义或作用是什么？",
+      "expectedMaterialId": "ds/tree.md",
+      "expectedEvidence": "**树（Tree）** 是一种层次型数据结构，由 n（n≥0）个节点组成的有限集合。当 n=0 时为空树；否则有一个根节点，其余节点分成若干",
+      "sourceLabel": "树与二叉树 · 概念定义",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-tree-2",
+      "query": "如果需要解释二叉树性质，资料给出的关键要点是什么？",
+      "expectedMaterialId": "ds/tree.md",
+      "expectedEvidence": "第 i 层最多有 2^(i-1) 个节点（根为第 1 层）。",
+      "sourceLabel": "树与二叉树 · 二叉树性质",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-ds-tree-3",
+      "query": "关于树与二叉树的二叉树遍历，最应记住的结论是什么？",
+      "expectedMaterialId": "ds/tree.md",
+      "expectedEvidence": "**前序**：根 → 左 → 右",
+      "sourceLabel": "树与二叉树 · 二叉树遍历",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-c-basics-1",
+      "query": "在“C语言基础”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "lang/c-basics.md",
+      "expectedEvidence": "C 语言是一种通用的、面向过程的高级编程语言，由 Dennis Ritchie 于 1972 年在贝尔实验室开发。它是现代编程语言的基石，操",
+      "sourceLabel": "C语言基础 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-c-basics-2",
+      "query": "如果需要解释核心特性，资料给出的关键要点是什么？",
+      "expectedMaterialId": "lang/c-basics.md",
+      "expectedEvidence": "**简洁高效**：仅 32 个关键字，直接操作内存，运行效率接近汇编",
+      "sourceLabel": "C语言基础 · 核心特性",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-java-basics-1",
+      "query": "在“Java基础”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "lang/java-basics.md",
+      "expectedEvidence": "Java 是一种面向对象、跨平台的高级编程语言，由 Sun Microsystems（现 Oracle）于 1995 年发布。其核心理念是\"",
+      "sourceLabel": "Java基础 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-java-basics-2",
+      "query": "如果需要解释核心特性，资料给出的关键要点是什么？",
+      "expectedMaterialId": "lang/java-basics.md",
+      "expectedEvidence": "**面向对象**：封装、继承、多态",
+      "sourceLabel": "Java基础 · 核心特性",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-python-basics-1",
+      "query": "在“Python基础”中，概述的核心定义或作用是什么？",
+      "expectedMaterialId": "lang/python-basics.md",
+      "expectedEvidence": "Python 是一种高级、解释型、动态类型编程语言，由 Guido van Rossum 于 1989 年开发。以简洁的语法和强大的标准库著",
+      "sourceLabel": "Python基础 · 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-lang-python-basics-2",
+      "query": "如果需要解释核心特性，资料给出的关键要点是什么？",
+      "expectedMaterialId": "lang/python-basics.md",
+      "expectedEvidence": "**简洁易读**：缩进定义代码块，无需花括号和分号",
+      "sourceLabel": "Python基础 · 核心特性",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-dns-1",
+      "query": "在“DNS 域名系统”中，DNS 概述的核心定义或作用是什么？",
+      "expectedMaterialId": "net/dns.md",
+      "expectedEvidence": "DNS（Domain Name System）是互联网的\"电话簿\"，负责将人类可读的域名（如 `www.example.com`）转换为机器",
+      "sourceLabel": "DNS 域名系统 · DNS 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-dns-2",
+      "query": "如果需要解释域名层级结构，资料给出的关键要点是什么？",
+      "expectedMaterialId": "net/dns.md",
+      "expectedEvidence": "域名从右向左层级递增，用点分隔：",
+      "sourceLabel": "DNS 域名系统 · 域名层级结构",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-http-1",
+      "query": "在“HTTP 与 HTTPS”中，HTTP 概述的核心定义或作用是什么？",
+      "expectedMaterialId": "net/http.md",
+      "expectedEvidence": "HTTP（HyperText Transfer Protocol）是应用层协议，基于请求-响应模型，默认端口 80，通常运行在 TCP 之上",
+      "sourceLabel": "HTTP 与 HTTPS · HTTP 概述",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-http-2",
+      "query": "如果需要解释HTTP 请求方法，资料给出的关键要点是什么？",
+      "expectedMaterialId": "net/http.md",
+      "expectedEvidence": "**幂等**：多次执行结果相同。",
+      "sourceLabel": "HTTP 与 HTTPS · HTTP 请求方法",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-osi-tcpip-1",
+      "query": "在“OSI 与 TCP/IP 模型”中，网络分层思想的核心定义或作用是什么？",
+      "expectedMaterialId": "net/osi-tcpip.md",
+      "expectedEvidence": "网络协议采用分层架构，每层完成特定功能，下层为上层提供服务，层间通过接口（SAP）交互。分层的好处：各层独立、灵活性好、易于实现和维护、促进",
+      "sourceLabel": "OSI 与 TCP/IP 模型 · 网络分层思想",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-osi-tcpip-2",
+      "query": "如果需要解释OSI 七层模型，资料给出的关键要点是什么？",
+      "expectedMaterialId": "net/osi-tcpip.md",
+      "expectedEvidence": "OSI（Open Systems Interconnection）参考模型由 ISO 提出，从下到上共七层：",
+      "sourceLabel": "OSI 与 TCP/IP 模型 · OSI 七层模型",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-tcp-udp-1",
+      "query": "在“TCP 与 UDP”中，TCP 与 UDP 对比的核心定义或作用是什么？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "TCP（传输控制协议）和 UDP（用户数据报协议）都是传输层协议，但特性截然不同。",
+      "sourceLabel": "TCP 与 UDP · TCP 与 UDP 对比",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-net-tcp-udp-2",
+      "query": "如果需要解释TCP 报文段结构，资料给出的关键要点是什么？",
+      "expectedMaterialId": "net/tcp-udp.md",
+      "expectedEvidence": "TCP 头部共 20 字节（不含选项），主要字段：",
+      "sourceLabel": "TCP 与 UDP · TCP 报文段结构",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-file-system-1",
+      "query": "在“文件系统”中，文件与目录的核心定义或作用是什么？",
+      "expectedMaterialId": "os/file-system.md",
+      "expectedEvidence": "**文件**是操作系统对存储设备上数据的一种抽象，是一组带名称的相关信息的集合。文件属性包括：名称、类型、大小、创建/修改时间、权限、所有者",
+      "sourceLabel": "文件系统 · 文件与目录",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-file-system-2",
+      "query": "如果需要解释索引节点（inode），资料给出的关键要点是什么？",
+      "expectedMaterialId": "os/file-system.md",
+      "expectedEvidence": "在 Unix/Linux 文件系统中，每个文件对应一个 **inode**（索引节点），它存储了文件的元数据：",
+      "sourceLabel": "文件系统 · 索引节点（inode）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-io-1",
+      "query": "在“I/O 模型”中，基本概念的核心定义或作用是什么？",
+      "expectedMaterialId": "os/io.md",
+      "expectedEvidence": "I/O 操作通常分为两个阶段：",
+      "sourceLabel": "I/O 模型 · 基本概念",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-io-2",
+      "query": "如果需要解释阻塞 I/O（Blocking I/O），资料给出的关键要点是什么？",
+      "expectedMaterialId": "os/io.md",
+      "expectedEvidence": "默认情况下，套接字 `read` 是阻塞的：调用后线程被挂起，直到数据就绪并拷贝完成才返回。编程简单，但单线程难以同时处理多个连接。",
+      "sourceLabel": "I/O 模型 · 阻塞 I/O（Blocking I/O）",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-memory-1",
+      "query": "在“内存管理”中，虚拟内存的核心定义或作用是什么？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "虚拟内存是操作系统提供的一种内存抽象技术，它使得每个进程都拥有自己独立的、连续的虚拟地址空间，而实际物理内存由操作系统统一管理。虚拟内存通过",
+      "sourceLabel": "内存管理 · 虚拟内存",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-memory-2",
+      "query": "如果需要解释分页机制，资料给出的关键要点是什么？",
+      "expectedMaterialId": "os/memory.md",
+      "expectedEvidence": "分页将虚拟地址空间划分为固定大小的页（Page，常见 4KB），物理内存划分为相同大小的页框（Frame）。MMU（内存管理单元）通过页表将",
+      "sourceLabel": "内存管理 · 分页机制",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-process-thread-1",
+      "query": "在“进程与线程”中，进程的概念的核心定义或作用是什么？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "进程是程序在某个数据集合上的一次执行过程，是系统进行资源分配和调度的基本单位。每个进程拥有独立的虚拟地址空间、全局变量、文件描述符表等资源。",
+      "sourceLabel": "进程与线程 · 进程的概念",
+      "category": "coverage-concept",
+      "provenance": "curated"
+    },
+    {
+      "id": "coverage-os-process-thread-2",
+      "query": "如果需要解释线程的概念，资料给出的关键要点是什么？",
+      "expectedMaterialId": "os/process-thread.md",
+      "expectedEvidence": "线程是进程内的一个执行单元，是 CPU 调度的最小单位。一个进程可以包含多个线程，它们共享进程的地址空间、堆区、全局变量和文件描述符，但每个",
+      "sourceLabel": "进程与线程 · 线程的概念",
+      "category": "coverage-detail",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-array-search",
+      "query": "数组的随机访问与二分查找为什么能配合获得高效查询？",
+      "expectedMaterialIds": [
+        "ds/array-linkedlist.md",
+        "algo/searching.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-stack-tree",
+      "query": "递归遍历二叉树时，调用栈与树的遍历过程分别起什么作用？",
+      "expectedMaterialIds": [
+        "ds/stack-queue.md",
+        "ds/tree.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-graph-greedy",
+      "query": "Kruskal 最小生成树如何同时体现图结构与贪心选择？",
+      "expectedMaterialIds": [
+        "ds/graph.md",
+        "algo/greedy.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-sort-divide",
+      "query": "归并排序为什么既属于排序算法又是典型分治算法？",
+      "expectedMaterialIds": [
+        "algo/sorting.md",
+        "algo/divide-conquer.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-dp-greedy",
+      "query": "贪心与动态规划在是否回溯历史决策方面有什么区别？",
+      "expectedMaterialIds": [
+        "algo/dp.md",
+        "algo/greedy.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-index-transaction",
+      "query": "数据库索引提升查询速度时，事务并发控制还需要解决什么问题？",
+      "expectedMaterialIds": [
+        "db/index.md",
+        "db/transaction.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-normalization-sql",
+      "query": "数据库范式如何影响 SQL 表结构设计？",
+      "expectedMaterialIds": [
+        "db/normalization.md",
+        "db/sql.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-osi-tcp",
+      "query": "TCP 在网络分层模型中位于哪一层，它又如何提供可靠传输？",
+      "expectedMaterialIds": [
+        "net/osi-tcpip.md",
+        "net/tcp-udp.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-dns-http",
+      "query": "浏览器访问网站时，DNS 解析与 HTTP 请求的先后关系是什么？",
+      "expectedMaterialIds": [
+        "net/dns.md",
+        "net/http.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "cross-language-types",
+      "query": "C、Java 与 Python 在类型系统和运行方式上有什么差异？",
+      "expectedMaterialIds": [
+        "lang/c-basics.md",
+        "lang/java-basics.md",
+        "lang/python-basics.md"
+      ],
+      "sourceLabel": "跨资料综合问题",
+      "category": "cross-material",
+      "provenance": "curated"
+    },
+    {
+      "id": "reject-kubernetes",
+      "query": "Kubernetes 的 Pod 调度器如何处理污点和容忍度？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-rust",
+      "query": "Rust 所有权系统中的生命周期标注如何工作？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-compiler",
+      "query": "LR(1) 项目集规范族如何构造？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-blockchain",
+      "query": "以太坊智能合约的 Gas 费用如何计算？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-graphics",
+      "query": "光栅化管线中的齐次裁剪如何实现？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-ml",
+      "query": "反向传播如何推导卷积核的梯度？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-crypto",
+      "query": "RSA-OAEP 填充为什么能抵抗选择密文攻击？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-devops",
+      "query": "Terraform 的状态锁在远程后端中如何实现？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-mobile",
+      "query": "Android Jetpack Compose 如何处理重组？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
+    },
+    {
+      "id": "reject-distributed",
+      "query": "Raft 算法怎样通过任期保证领导者唯一性？",
+      "expectedMaterialIds": [],
+      "sourceLabel": "语料外问题，应拒答",
+      "category": "unanswerable",
+      "provenance": "curated",
+      "answerable": false
     }
   ]
 }

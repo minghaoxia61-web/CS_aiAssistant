@@ -256,6 +256,9 @@ export type RetrievalStrategy = 'bm25' | 'ngram' | 'lexical-hybrid' | 'semantic-
 export interface ScoredChunk {
   chunk: Chunk
   score: number
+  /** 未归一化的词法证据强度，可用于判断查询是否完全超出语料。 */
+  evidenceScore: number
+  queryCoverage: number
 }
 
 export interface RankChunksOptions {
@@ -314,6 +317,9 @@ export function rankChunks(
       ngram: ngramSimilarity(queryBigrams, item.bigramSet),
       singleCharacter: singleCharacterSimilarity(querySingleCharacters, item.chunk.text),
       vector: vector && queryVector ? cosineSimilarity(queryVector, vector) : 0,
+      queryCoverage: queryTF.size
+        ? [...queryTF.keys()].filter((term) => item.tf.has(term)).length / queryTF.size
+        : 0,
     }
   })
   const maxBm25 = Math.max(...raw.map((item) => item.bm25), 1e-9)
@@ -324,7 +330,7 @@ export function rankChunks(
     : strategy
 
   return raw
-    .map(({ chunk, bm25, ngram, singleCharacter, vector }) => {
+    .map(({ chunk, bm25, ngram, singleCharacter, vector, queryCoverage }) => {
       const normalizedBm25 = bm25 / maxBm25
       const normalizedNgram = Math.max(ngram / maxNgram, singleCharacter)
       const normalizedVector = vector / maxVector
@@ -335,7 +341,12 @@ export function rankChunks(
           : effectiveStrategy === 'semantic-hybrid'
             ? BM25_IN_HYBRID * normalizedBm25 + VECTOR_WEIGHT * normalizedVector
             : BM25_WEIGHT * normalizedBm25 + NGRAM_WEIGHT * normalizedNgram
-      return { chunk, score }
+      return {
+        chunk,
+        score,
+        evidenceScore: bm25 + ngram + singleCharacter,
+        queryCoverage,
+      }
     })
     .sort((a, b) => b.score - a.score)
 }

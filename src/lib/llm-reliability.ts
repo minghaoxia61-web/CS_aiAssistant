@@ -1,3 +1,5 @@
+import type { LlmCallMeta } from '@/shared/types'
+
 export type LlmErrorKind =
   | 'aborted'
   | 'auth'
@@ -12,6 +14,44 @@ export interface LlmErrorInfo {
   kind: LlmErrorKind
   message: string
   retryable: boolean
+}
+
+export interface LlmReliabilityStats {
+  calls: number
+  successes: number
+  repairs: number
+  totalAttempts: number
+  averageLatencyMs: number
+  lastCall?: LlmCallMeta & { ok: boolean; at: number }
+}
+
+const METRICS_KEY = 'cs_llm_reliability:v1'
+
+export function getLlmReliabilityStats(): LlmReliabilityStats {
+  const empty = { calls: 0, successes: 0, repairs: 0, totalAttempts: 0, averageLatencyMs: 0 }
+  if (typeof localStorage === 'undefined') return empty
+  try {
+    return { ...empty, ...JSON.parse(localStorage.getItem(METRICS_KEY) || '{}') }
+  } catch {
+    return empty
+  }
+}
+
+export function recordLlmCall(meta: LlmCallMeta | undefined, ok: boolean): void {
+  if (!meta || typeof localStorage === 'undefined') return
+  const previous = getLlmReliabilityStats()
+  const calls = previous.calls + 1
+  const totalLatency = previous.averageLatencyMs * previous.calls + meta.latencyMs
+  const next: LlmReliabilityStats = {
+    calls,
+    successes: previous.successes + (ok ? 1 : 0),
+    repairs: previous.repairs + (meta.repaired ? 1 : 0),
+    totalAttempts: previous.totalAttempts + meta.attempts,
+    averageLatencyMs: Math.round(totalLatency / calls),
+    lastCall: { ...meta, ok, at: Date.now() },
+  }
+  localStorage.setItem(METRICS_KEY, JSON.stringify(next))
+  window.dispatchEvent(new CustomEvent('llm-reliability-updated', { detail: next }))
 }
 
 const RETRYABLE_PATTERNS = [

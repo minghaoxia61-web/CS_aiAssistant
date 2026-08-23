@@ -7,7 +7,7 @@ import { IPC, type ApiConfig, type ApiConfigItem, type Material, type FileFilter
 import * as store from './store';
 import { getConfig, saveConfig, listConfigs, saveConfigItem, deleteConfigItem, setActiveConfig } from './config';
 import { parseFile, getFileType } from './parsers';
-import { streamChat, chatJSON } from './llm';
+import { streamChat, chatStructuredJSON } from './llm';
 import * as taskQueue from './task-queue';
 
 const now = () => Date.now();
@@ -209,7 +209,7 @@ export function registerIpc(): void {
 
   // 流式对话：返回 requestId，token 通过 llm:token / llm:done / llm:error 事件推送
   ipcMain.handle(IPC.LLM_STREAM, (_e, opts: LlmStreamOptions) => {
-    const requestId = uuidv4();
+    const requestId = opts.requestId || uuidv4();
     const handle = streamChat(
       { config: opts.config, messages: opts.messages, temperature: opts.temperature, maxTokens: opts.maxTokens, stream: true },
       {
@@ -240,17 +240,36 @@ export function registerIpc(): void {
 
   // 非流式调用（用于出题/批改等结构化 JSON 输出）
   ipcMain.handle(IPC.LLM_JSON, async (_e, opts: LlmStreamOptions) => {
+    const requestId = uuidv4();
+    const startedAt = Date.now();
     try {
-      const content = await chatJSON({
+      const result = await chatStructuredJSON({
         config: opts.config,
         messages: opts.messages,
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
         stream: false,
+        responseKind: opts.responseKind,
+        expectedItems: opts.expectedItems,
       });
-      return { ok: true, content };
+      return { ok: true, content: result.content, meta: {
+        requestId,
+        attempts: result.attempts,
+        repaired: result.repaired,
+        latencyMs: Date.now() - startedAt,
+        mode: 'json',
+      } };
     } catch (e) {
-      return { ok: false, error: (e as Error).message };
+      const attempts = typeof (e as { attempts?: unknown }).attempts === 'number'
+        ? (e as { attempts: number }).attempts
+        : 1;
+      return { ok: false, error: (e as Error).message, meta: {
+        requestId,
+        attempts,
+        repaired: attempts > 1,
+        latencyMs: Date.now() - startedAt,
+        mode: 'json',
+      } };
     }
   });
 

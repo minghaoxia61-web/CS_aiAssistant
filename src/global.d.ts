@@ -13,6 +13,7 @@ import type {
   LlmTokenEvent,
   LlmDoneEvent,
   LlmErrorEvent,
+  LlmJsonResponse,
   UserProfile,
   TaskProgress,
 } from './shared/types';
@@ -53,7 +54,7 @@ export interface ElectronAPI {
   // LLM
   llmStream(opts: LlmStreamOptions): Promise<string>;
   llmAbort(requestId: string): Promise<boolean>;
-  llmJSON(opts: LlmStreamOptions): Promise<{ ok: true; content: string } | { ok: false; error: string }>;
+  llmJSON(opts: LlmStreamOptions): Promise<LlmJsonResponse>;
   onLlmToken(cb: (payload: LlmTokenEvent) => void): () => void;
   onLlmDone(cb: (payload: LlmDoneEvent) => void): () => void;
   onLlmError(cb: (payload: LlmErrorEvent) => void): () => void;

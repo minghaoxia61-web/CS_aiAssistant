@@ -75,6 +75,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
           ],
           signal: abortController.signal,
           temperature: 0.5,
+          responseKind: 'flashcards',
         })
         const arr = extractJSON(raw) as Flashcard[]
         const doc: ReviewDoc = {

@@ -1,7 +1,7 @@
 // Web 版 API 配置存储（服务端）
 // 替代 electron/config.ts，去掉 electron-store 和机器绑定加密
 // 配置存到 ./data/config.json
-// API Key 优先从环境变量读取，无环境变量时使用内置默认 key（大赛演示用）
+// API Key 优先从环境变量读取；无环境变量时允许用户通过设置页使用 BYOK。
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';

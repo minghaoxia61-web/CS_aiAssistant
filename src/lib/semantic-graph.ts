@@ -110,6 +110,7 @@ export async function generateSemanticGraph(
     config,
     signal,
     temperature: 0.2,
+    responseKind: 'semantic_graph',
     messages: [
       {
         role: 'system',

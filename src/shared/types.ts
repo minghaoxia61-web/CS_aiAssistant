@@ -262,11 +262,31 @@ export interface LlmMessage {
   content: string;
 }
 
+export type LlmStructuredKind = 'quiz' | 'grade' | 'flashcards' | 'semantic_graph';
+
+export interface LlmCallMeta {
+  requestId: string;
+  attempts: number;
+  repaired: boolean;
+  latencyMs: number;
+  mode: 'json' | 'stream_fallback';
+}
+
+export type LlmJsonResponse =
+  | { ok: true; content: string; meta?: LlmCallMeta }
+  | { ok: false; error: string; meta?: LlmCallMeta };
+
 export interface LlmStreamOptions {
+  /** 客户端预先生成，用于避免快速失败事件早于调用方拿到请求 ID。 */
+  requestId?: string;
   config: ApiConfig;
   messages: LlmMessage[];
   temperature?: number;
   maxTokens?: number;
+  /** 结构化任务类型；服务端会校验字段并在失败时进行一次低温修复。 */
+  responseKind?: LlmStructuredKind;
+  /** 期望的顶层数组元素数，用于防止模型输出被截断。 */
+  expectedItems?: number;
 }
 
 export interface LlmTokenEvent {

@@ -62,19 +62,29 @@ export interface KnowledgeTracingEvaluation {
   winner: 'bkt' | 'heuristic' | 'tie'
 }
 
+export interface BktCalibration {
+  status: 'fitted' | 'fallback_insufficient_data' | 'fallback_no_improvement' | 'fixed'
+  trainCount: number
+  validationCount: number
+  defaultValidation?: PredictionMetrics
+  fittedValidation?: PredictionMetrics
+  logLossImprovement?: number
+}
+
 export interface KnowledgeTracingModel {
   generatedAt: number
   parameters: BktParameters
   trajectories: BktTrajectory[]
   steps: BktStep[]
   evaluation: KnowledgeTracingEvaluation
+  calibration: BktCalibration
 }
 
 function probability(value: number): number {
   return Math.min(0.999, Math.max(0.001, value))
 }
 
-function validateParameters(parameters: BktParameters): BktParameters {
+export function validateParameters(parameters: BktParameters): BktParameters {
   return {
     prior: probability(parameters.prior),
     learn: probability(parameters.learn),
@@ -82,6 +92,22 @@ function validateParameters(parameters: BktParameters): BktParameters {
     slip: probability(parameters.slip),
     forgetPerDay: Math.min(0.25, Math.max(0, parameters.forgetPerDay)),
   }
+}
+
+const FIT_BOUNDS: Record<keyof BktParameters, [number, number]> = {
+  prior: [0.02, 0.8],
+  learn: [0.01, 0.6],
+  guess: [0.02, 0.45],
+  slip: [0.02, 0.35],
+  forgetPerDay: [0, 0.08],
+}
+
+const FIT_INITIAL_STEPS: Record<keyof BktParameters, number> = {
+  prior: 0.16,
+  learn: 0.12,
+  guess: 0.1,
+  slip: 0.08,
+  forgetPerDay: 0.015,
 }
 
 export function predictCorrect(mastery: number, parameters = DEFAULT_BKT_PARAMETERS): number {
@@ -160,6 +186,149 @@ function metrics(predictions: number[], outcomes: boolean[]): PredictionMetrics 
   }
 }
 
+function averageLogLoss(events: KnowledgeTraceEvent[], parameters: BktParameters): number {
+  if (!events.length) return 0
+  const states = new Map<string, { mastery: number; lastAt?: number }>()
+  let loss = 0
+  for (const event of events) {
+    const current = states.get(event.chapter) || { mastery: parameters.prior }
+    const mastery = applyForgetting(current.mastery, current.lastAt, event.at, parameters)
+    const prediction = predictCorrect(mastery, parameters)
+    loss += event.correct ? -Math.log(prediction) : -Math.log(1 - prediction)
+    states.set(event.chapter, {
+      mastery: updateBkt(mastery, event.correct, parameters),
+      lastAt: event.at,
+    })
+  }
+  return loss / events.length
+}
+
+function splitCalibrationEvents(events: KnowledgeTraceEvent[]): {
+  train: KnowledgeTraceEvent[]
+  validation: KnowledgeTraceEvent[]
+} {
+  const chapters = new Map<string, KnowledgeTraceEvent[]>()
+  for (const event of events) {
+    const list = chapters.get(event.chapter) || []
+    list.push(event)
+    chapters.set(event.chapter, list)
+  }
+  const train: KnowledgeTraceEvent[] = []
+  const validation: KnowledgeTraceEvent[] = []
+  for (const sequence of chapters.values()) {
+    sequence.sort((a, b) => a.at - b.at)
+    const validationSize = sequence.length >= 5
+      ? Math.max(1, Math.floor(sequence.length * 0.2))
+      : 0
+    train.push(...sequence.slice(0, sequence.length - validationSize))
+    validation.push(...sequence.slice(sequence.length - validationSize))
+  }
+  return {
+    train: train.sort((a, b) => a.at - b.at),
+    validation: validation.sort((a, b) => a.at - b.at),
+  }
+}
+
+function evaluateHoldout(
+  train: KnowledgeTraceEvent[],
+  validation: KnowledgeTraceEvent[],
+  parameters: BktParameters,
+): PredictionMetrics {
+  const states = new Map<string, { mastery: number; lastAt?: number }>()
+  for (const event of train) {
+    const current = states.get(event.chapter) || { mastery: parameters.prior }
+    const mastery = applyForgetting(current.mastery, current.lastAt, event.at, parameters)
+    states.set(event.chapter, {
+      mastery: updateBkt(mastery, event.correct, parameters),
+      lastAt: event.at,
+    })
+  }
+  const predictions: number[] = []
+  const outcomes: boolean[] = []
+  for (const event of validation) {
+    const current = states.get(event.chapter) || { mastery: parameters.prior }
+    const mastery = applyForgetting(current.mastery, current.lastAt, event.at, parameters)
+    predictions.push(predictCorrect(mastery, parameters))
+    outcomes.push(event.correct)
+    states.set(event.chapter, {
+      mastery: updateBkt(mastery, event.correct, parameters),
+      lastAt: event.at,
+    })
+  }
+  return metrics(predictions, outcomes)
+}
+
+/**
+ * 使用按知识点时间切分的留出集拟合全局 BKT 参数。
+ * 只有样本充足且留出集 Log Loss 确实改善时才采用拟合结果。
+ */
+export function calibrateBktParameters(
+  events: KnowledgeTraceEvent[],
+  defaults: BktParameters = DEFAULT_BKT_PARAMETERS,
+): { parameters: BktParameters; calibration: BktCalibration } {
+  const fallback = validateParameters(defaults)
+  const { train, validation } = splitCalibrationEvents(events)
+  if (train.length < 20 || validation.length < 5) {
+    return {
+      parameters: fallback,
+      calibration: {
+        status: 'fallback_insufficient_data',
+        trainCount: train.length,
+        validationCount: validation.length,
+      },
+    }
+  }
+
+  const lastAtByChapter = new Map<string, number>()
+  let hasForgettingSignal = false
+  for (const event of train) {
+    const previousAt = lastAtByChapter.get(event.chapter)
+    if (previousAt !== undefined && event.at - previousAt >= 86_400_000) {
+      hasForgettingSignal = true
+      break
+    }
+    lastAtByChapter.set(event.chapter, event.at)
+  }
+  const keys: (keyof BktParameters)[] = ['prior', 'learn', 'guess', 'slip']
+  if (hasForgettingSignal) keys.push('forgetPerDay')
+  let fitted = { ...fallback }
+  let bestLoss = averageLogLoss(train, fitted)
+
+  for (let round = 0; round < 4; round += 1) {
+    for (const key of keys) {
+      const step = FIT_INITIAL_STEPS[key] / (2 ** round)
+      const [minimum, maximum] = FIT_BOUNDS[key]
+      const candidates = [-2, -1, 0, 1, 2]
+        .map((offset) => Math.min(maximum, Math.max(minimum, fitted[key] + offset * step)))
+      for (const value of new Set(candidates)) {
+        const candidate = validateParameters({ ...fitted, [key]: value })
+        if (candidate.guess + candidate.slip >= 0.75) continue
+        const loss = averageLogLoss(train, candidate)
+        if (loss + 1e-9 < bestLoss) {
+          fitted = candidate
+          bestLoss = loss
+        }
+      }
+    }
+  }
+
+  const defaultValidation = evaluateHoldout(train, validation, fallback)
+  const fittedValidation = evaluateHoldout(train, validation, fitted)
+  const improvement = Math.round((defaultValidation.logLoss - fittedValidation.logLoss) * 1000) / 1000
+  const useFitted = improvement >= 0.005
+  return {
+    parameters: useFitted ? fitted : fallback,
+    calibration: {
+      status: useFitted ? 'fitted' : 'fallback_no_improvement',
+      trainCount: train.length,
+      validationCount: validation.length,
+      defaultValidation,
+      fittedValidation,
+      logLossImprovement: improvement,
+    },
+  }
+}
+
 function heuristicPrediction(history: boolean[]): number {
   if (history.length === 0) return 0.5
   const weighted = history.reduce((sum, correct, index) => {
@@ -172,11 +341,21 @@ function heuristicPrediction(history: boolean[]): number {
 
 export function buildKnowledgeTracingModel(
   sessions: QuizSession[],
-  parameters: BktParameters = DEFAULT_BKT_PARAMETERS,
+  parameters: BktParameters | 'auto' = 'auto',
   now = Date.now(),
 ): KnowledgeTracingModel {
-  const config = validateParameters(parameters)
   const events = extractKnowledgeTraceEvents(sessions)
+  const calibrated = parameters === 'auto'
+    ? calibrateBktParameters(events)
+    : {
+        parameters: validateParameters(parameters),
+        calibration: {
+          status: 'fixed' as const,
+          trainCount: events.length,
+          validationCount: 0,
+        },
+      }
+  const config = calibrated.parameters
   const state = new Map<string, { mastery: number; attempts: number; lastAt?: number }>()
   const histories = new Map<string, boolean[]>()
   const steps: BktStep[] = []
@@ -225,6 +404,7 @@ export function buildKnowledgeTracingModel(
     parameters: config,
     trajectories,
     steps,
+    calibration: calibrated.calibration,
     evaluation: {
       sampleCount: outcomes.length,
       bkt: bktMetrics,

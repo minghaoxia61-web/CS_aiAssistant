@@ -7,7 +7,7 @@ const DEFAULT_ALLOWED_HOSTS = new Set([
   'dashscope.aliyuncs.com',
   'api.siliconflow.cn',
   'api.moonshot.cn',
-  'text.pollinations.ai',
+  'gen.pollinations.ai',
 ]);
 
 function allowedHosts(): Set<string> {
@@ -36,11 +36,9 @@ export function validateLlmBaseUrl(baseUrl: string): URL {
 
 export function resolveLlmConfig(serverConfig: ApiConfig, clientConfig?: ApiConfig): ApiConfig {
   const baseUrl = clientConfig?.baseUrl?.trim() || serverConfig.baseUrl;
-  const parsed = validateLlmBaseUrl(baseUrl);
+  validateLlmBaseUrl(baseUrl);
   const apiKey = serverConfig.apiKey || clientConfig?.apiKey || '';
-  const keylessProvider = parsed.hostname === 'text.pollinations.ai';
-
-  if (!apiKey && !keylessProvider) {
+  if (!apiKey) {
     throw new Error('未配置 API Key，请前往设置页添加，或在部署环境配置 LLM_API_KEY');
   }
 

@@ -1,7 +1,7 @@
 // LLM 调用客户端 + 提示词构建器
 // 通过 IPC 转发到主进程发起请求，避免渲染进程 CORS 问题，且 API Key 不暴露到前端
-import type { ApiConfig, Material, QuizQuestion, QuizQuestionType, QuizDifficulty, QuizRatios, LlmMessage, UserProfile } from '@/shared/types'
-import { classifyLlmError, delay, toLlmError } from '@/lib/llm-reliability'
+import type { ApiConfig, Material, QuizQuestion, QuizQuestionType, QuizDifficulty, QuizRatios, LlmMessage, LlmStructuredKind, UserProfile } from '@/shared/types'
+import { classifyLlmError, delay, recordLlmCall, toLlmError } from '@/lib/llm-reliability'
 
 export interface StreamChatOptions {
   config: ApiConfig
@@ -10,6 +10,8 @@ export interface StreamChatOptions {
   signal?: AbortSignal
   temperature?: number
   maxTokens?: number
+  responseKind?: LlmStructuredKind
+  expectedItems?: number
 }
 
 /** 流式调用：通过主进程 IPC 转发，逐 token 回调 */
@@ -22,7 +24,7 @@ export async function streamChat(opts: StreamChatOptions): Promise<string> {
     try {
       return await new Promise<string>((resolve, reject) => {
         let settled = false
-        let requestId = ''
+        const requestId = crypto.randomUUID()
         let timeout: ReturnType<typeof setTimeout> | undefined
 
         const cleanup = () => {
@@ -64,15 +66,14 @@ export async function streamChat(opts: StreamChatOptions): Promise<string> {
         }
         signal?.addEventListener('abort', handleAbort, { once: true })
 
-        void window.api.llmStream({ config, messages, temperature, maxTokens }).then(
+        void window.api.llmStream({ requestId, config, messages, temperature, maxTokens }).then(
           (id) => {
-            requestId = id
             if (settled) {
-              void window.api.llmAbort(requestId)
+              void window.api.llmAbort(id)
               return
             }
             timeout = setTimeout(() => {
-              void window.api.llmAbort(requestId)
+              void window.api.llmAbort(id)
               settleError(new Error('模型响应超时'))
             }, 90_000)
           },
@@ -92,11 +93,11 @@ export async function streamChat(opts: StreamChatOptions): Promise<string> {
 
 /** 非流式调用（用于结构化 JSON 输出，如出题/批改） */
 export async function chatJSON(opts: Omit<StreamChatOptions, 'onToken'>): Promise<string> {
-  const { config, messages, signal, temperature, maxTokens } = opts
+  const { config, messages, signal, temperature, maxTokens, responseKind, expectedItems } = opts
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     try {
-      const response = window.api.llmJSON({ config, messages, temperature, maxTokens })
+      const response = window.api.llmJSON({ config, messages, temperature, maxTokens, responseKind, expectedItems })
       let timeoutId: ReturnType<typeof setTimeout> | undefined
       const timeout = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error('模型响应超时')), 90_000)
@@ -104,7 +105,8 @@ export async function chatJSON(opts: Omit<StreamChatOptions, 'onToken'>): Promis
       const res = await Promise.race([response, timeout]).finally(() => {
         if (timeoutId) clearTimeout(timeoutId)
       })
-      if (!res.ok) throw new Error((res as { error: string }).error)
+      recordLlmCall(res.meta, res.ok)
+      if (res.ok === false) throw new Error(res.error)
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
       return res.content
     } catch (error) {

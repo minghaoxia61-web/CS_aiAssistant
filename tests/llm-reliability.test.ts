@@ -26,14 +26,13 @@ test('deployment key takes precedence over a browser key', () => {
   assert.equal(resolved.apiKey, 'deployment-key')
 })
 
-test('keyless Pollinations provider remains available', () => {
-  const resolved = resolveLlmConfig(serverConfig, {
+test('all current providers require a key, including migrated Pollinations', () => {
+  assert.throws(() => resolveLlmConfig(serverConfig, {
     ...serverConfig,
-    baseUrl: 'https://text.pollinations.ai/openai',
+    baseUrl: 'https://gen.pollinations.ai/v1',
     apiKey: '',
-    model: 'openai-large',
-  })
-  assert.equal(resolved.apiKey, '')
+    model: 'openai',
+  }), /未配置 API Key/)
 })
 
 test('unknown or unsafe model proxy targets are rejected', () => {

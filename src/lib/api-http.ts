@@ -309,7 +309,7 @@ export function createHttpApi(): ElectronAPI {
 
     // ---------- LLM 流式 ----------
     async llmStream(opts: LlmStreamOptions) {
-      const requestId = crypto.randomUUID()
+      const requestId = opts.requestId || crypto.randomUUID()
       const controller = new AbortController()
       abortControllers.set(requestId, controller)
 
@@ -387,7 +387,11 @@ export function createHttpApi(): ElectronAPI {
         abortControllers.delete(requestId)
       }
       // 通知服务端中止
-      fetch(`${API_BASE}/api/llm/abort/${requestId}`, { method: 'POST' }).catch(() => {})
+      fetch(`${API_BASE}/api/llm/abort`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      }).catch(() => {})
       return true
     },
     async llmJSON(opts) {

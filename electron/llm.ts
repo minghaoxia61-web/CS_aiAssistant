@@ -2,8 +2,8 @@
 // 在主进程发起请求，避免渲染进程的 CORS 问题，且 API Key 不暴露到前端
 import * as https from 'https';
 import * as http from 'http';
-import * as url from 'url';
-import type { ApiConfig, LlmMessage } from '../src/shared/types';
+import type { ApiConfig, LlmMessage, LlmStructuredKind } from '../src/shared/types';
+import { executeStructuredWithRepair } from '../src/lib/structured-output';
 
 export interface StreamCallbacks {
   onToken: (token: string) => void;
@@ -17,6 +17,14 @@ export interface ChatRequestOptions {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  responseKind?: LlmStructuredKind;
+  expectedItems?: number;
+}
+
+export interface StructuredChatResult {
+  content: string;
+  attempts: number;
+  repaired: boolean;
 }
 
 /** 构建请求体 */
@@ -50,7 +58,7 @@ function createRequest(
   const trimmedBase = config.baseUrl.replace(/\/$/, '');
   const hasEndpointPath = /\/[^/]+\.[^/]+\/.+/.test(trimmedBase) && !/\/v\d+$/.test(trimmedBase);
   const requestUrl = hasEndpointPath ? trimmedBase : `${trimmedBase}/chat/completions`;
-  const target = url.parse(requestUrl);
+  const target = new URL(requestUrl);
   const isHttps = target.protocol === 'https:';
   const lib = isHttps ? https : http;
 
@@ -66,7 +74,7 @@ function createRequest(
   const options: https.RequestOptions = {
     hostname: target.hostname,
     port: target.port || (isHttps ? 443 : 80),
-    path: target.path,
+    path: `${target.pathname}${target.search}`,
     method: 'POST',
     headers,
   };
@@ -196,6 +204,24 @@ export function chatJSON(opts: ChatRequestOptions): Promise<string> {
       (msg) => reject(new Error(msg)),
     );
   });
+}
+
+/** 校验结构化输出；首次格式错误时追加校验原因并进行一次低温修复。 */
+export async function chatStructuredJSON(opts: ChatRequestOptions): Promise<StructuredChatResult> {
+  if (!opts.responseKind) {
+    return { content: await chatJSON(opts), attempts: 1, repaired: false };
+  }
+  return executeStructuredWithRepair(opts.responseKind, (repair) => chatJSON(repair
+    ? {
+        ...opts,
+        temperature: 0,
+        messages: [
+          ...opts.messages,
+          { role: 'assistant', content: repair.previous.slice(0, 12_000) },
+          { role: 'user', content: repair.prompt },
+        ],
+      }
+    : opts), opts.expectedItems);
 }
 
 // ---------- 多模态视觉调用（用于图片 OCR） ----------

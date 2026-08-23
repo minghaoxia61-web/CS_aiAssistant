@@ -40,7 +40,8 @@ try {
   await assertRoute('/', 'text/html')
   await assertRoute('/api/config', 'application/json')
   await assertRoute('/api/knowledge/catalog', 'application/json')
-  console.log('生产冒烟测试通过：SPA、配置 API 与知识库 API 均可用。')
+  await assertRoute('/api/llm/health', 'application/json')
+  console.log('生产冒烟测试通过：SPA、配置、知识库与 LLM 代理健康检查均可用。')
 } finally {
   child.kill()
   await new Promise<void>((resolve) => {

@@ -1,7 +1,7 @@
 // 设置页：多 API 配置管理 / 连接测试 / 生成参数
 // 列表为主，点击配置才展开编辑面板
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive, Database, RefreshCw, Sparkles, Download } from 'lucide-react'
+import { Activity, ArrowLeft, Check, Loader2, Plug, Zap, Plus, Server, X, Edit3, Lock, Unlock, Copy, Trash2, HardDrive, Database, RefreshCw, Sparkles, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '@/lib/store'
 import { streamChat } from '@/lib/llm'
@@ -9,17 +9,18 @@ import { confirmDialog, promptDialog } from '@/lib/dialog'
 import { cn } from '@/lib/utils'
 import { getStorageStats, type StorageStats } from '@/lib/db'
 import { loadDemoData, isDemoLoaded, type DemoProgress } from '@/lib/demo-data'
+import { getLlmReliabilityStats, type LlmReliabilityStats } from '@/lib/llm-reliability'
 import type { ApiConfig, ApiConfigItem } from '@/shared/types'
 import DataBackup from '@/components/DataBackup'
 
 const PRESETS: { name: string; baseUrl: string; model: string }[] = [
   { name: '智谱 GLM（免费）', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash-250414' },
-  { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-v4-flash' },
   { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
   { name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
   { name: '硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct' },
   { name: '月之暗面', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
-  { name: 'Pollinations（免费）', baseUrl: 'https://text.pollinations.ai/openai', model: 'openai-large' },
+  { name: 'Pollinations', baseUrl: 'https://gen.pollinations.ai/v1', model: 'openai' },
 ]
 
 const EMPTY_FORM: ApiConfig = {
@@ -29,6 +30,14 @@ const EMPTY_FORM: ApiConfig = {
   temperature: 0.7,
   maxTokens: 0,
   topP: 1,
+}
+
+interface LlmProxyHealth {
+  ok: boolean
+  provider: string
+  model: string
+  deploymentKeyConfigured: boolean
+  byokSupported: boolean
 }
 
 export default function Setup() {
@@ -42,6 +51,9 @@ export default function Setup() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string; latency?: number } | null>(null)
   const [savedToast, setSavedToast] = useState(false)
+  const [llmStats, setLlmStats] = useState<LlmReliabilityStats>(() => getLlmReliabilityStats())
+  const [proxyHealth, setProxyHealth] = useState<LlmProxyHealth | null>(null)
+  const [proxyChecked, setProxyChecked] = useState(false)
 
   // 密码锁：开启后查看/编辑 API Key 需输入密码（密码哈希存于 localStorage）
   const [lockEnabled, setLockEnabled] = useState(() => localStorage.getItem('apiKeyLock_enabled') === 'true')
@@ -62,6 +74,18 @@ export default function Setup() {
 
   useEffect(() => {
     isDemoLoaded().then(setDemoLoaded)
+    const refresh = () => setLlmStats(getLlmReliabilityStats())
+    window.addEventListener('llm-reliability-updated', refresh)
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      fetch('/api/llm/health')
+        .then((response) => response.ok ? response.json() as Promise<LlmProxyHealth> : Promise.reject())
+        .then(setProxyHealth)
+        .catch(() => setProxyHealth(null))
+        .finally(() => setProxyChecked(true))
+    } else {
+      setProxyChecked(true)
+    }
+    return () => window.removeEventListener('llm-reliability-updated', refresh)
   }, [])
 
   const handleLoadDemo = async () => {
@@ -331,6 +355,32 @@ export default function Setup() {
         </div>
 
         <DataBackup />
+
+        <div className="panel p-5 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-lg bg-sage/10 text-sage flex items-center justify-center">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-bone">结构化调用可靠性</h3>
+              <p className="text-xs text-bone-faint mt-0.5">仅保存在本机，不记录提示词、回答或 API Key</p>
+            </div>
+            <span className={cn(
+              'ml-auto text-[10px] px-2 py-1 rounded-full',
+              proxyHealth?.ok ? 'text-sage bg-sage/10' : 'text-bone-faint bg-ink-800/60',
+            )}>
+              {!proxyChecked ? '正在检查代理' : proxyHealth?.ok
+                ? `${proxyHealth.provider} · ${proxyHealth.deploymentKeyConfigured ? '服务端密钥' : '支持 BYOK'}`
+                : 'Web 代理未部署'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-ink-800/40 rounded-lg p-3"><small className="text-bone-faint">调用</small><strong className="block text-bone mt-1">{llmStats.calls}</strong></div>
+            <div className="bg-ink-800/40 rounded-lg p-3"><small className="text-bone-faint">成功率</small><strong className="block text-bone mt-1">{llmStats.calls ? Math.round(llmStats.successes / llmStats.calls * 100) : 0}%</strong></div>
+            <div className="bg-ink-800/40 rounded-lg p-3"><small className="text-bone-faint">自动修复</small><strong className="block text-bone mt-1">{llmStats.repairs}</strong></div>
+            <div className="bg-ink-800/40 rounded-lg p-3"><small className="text-bone-faint">平均延迟</small><strong className="block text-bone mt-1">{llmStats.averageLatencyMs} ms</strong></div>
+          </div>
+        </div>
 
         {/* 配置列表 */}
         <div className="mb-6">
@@ -680,7 +730,7 @@ export default function Setup() {
                       className="input font-mono text-sm"
                       value={form.model}
                       onChange={(e) => update({ model: e.target.value })}
-                      placeholder="deepseek-chat"
+                      placeholder="deepseek-v4-flash"
                     />
                   </div>
 

@@ -15,6 +15,7 @@
   },
   "include": [
     "server/**/*.ts",
+    "api/**/*.ts",
     "electron/parsers.ts",
     "electron/llm.ts",
     "src/shared/**/*.ts"

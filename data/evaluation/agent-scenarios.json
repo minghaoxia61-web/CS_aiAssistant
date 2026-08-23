@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "学习 Agent 的固定场景评测集，覆盖证据约束、用户确认、验证门禁、状态恢复和完整闭环。",
+  "cases": [
+    { "id": "no-learning-history", "group": "guardrail", "fixture": "no-history", "expectedStatus": "blocked", "expectedBlockedState": "diagnose" },
+    { "id": "no-grounding-material", "group": "guardrail", "fixture": "no-material", "expectedStatus": "blocked", "expectedBlockedState": "ground" },
+    { "id": "foreign-subject-material", "group": "guardrail", "fixture": "foreign-material", "expectedStatus": "blocked", "expectedBlockedState": "ground" },
+    { "id": "grounded-run-ready", "group": "grounding", "fixture": "ready", "expectedStatus": "ready", "minimumEvidence": 1 },
+    { "id": "action-awaits-confirmation", "group": "guardrail", "fixture": "ready", "expectedStatus": "ready", "expectedAction": "chat", "masteryMustRemainUnchanged": true },
+    { "id": "start-does-not-update", "group": "guardrail", "fixture": "started", "expectedStatus": "waiting_verification", "masteryMustRemainUnchanged": true },
+    { "id": "stale-quiz-is-ignored", "group": "guardrail", "fixture": "stale-reconcile", "expectedStatus": "waiting_verification", "masteryMustRemainUnchanged": true },
+    { "id": "unrelated-chapter-is-ignored", "group": "guardrail", "fixture": "unrelated-reconcile", "expectedStatus": "waiting_verification", "masteryMustRemainUnchanged": true },
+    { "id": "new-correct-answer-completes", "group": "workflow", "fixture": "correct-reconcile", "expectedStatus": "complete", "expectedCompletedStates": ["verify", "update", "schedule"] },
+    { "id": "new-wrong-answer-still-updates", "group": "workflow", "fixture": "wrong-reconcile", "expectedStatus": "complete", "expectedCompletedStates": ["verify", "update", "schedule"] },
+    { "id": "reviewed-wrong-question-completes", "group": "workflow", "fixture": "review-reconcile", "expectedStatus": "complete", "expectedCompletedStates": ["verify", "update", "schedule"] },
+    { "id": "serialized-run-can-resume", "group": "recovery", "fixture": "serialized-reconcile", "expectedStatus": "complete", "expectedCompletedStates": ["verify", "update", "schedule"] }
+  ]
+}

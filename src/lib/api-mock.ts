@@ -281,7 +281,7 @@ export function installMockIfNeeded() {
     },
     // LLM mock：浏览器预览中模拟流式回复
     async llmStream(opts: LlmStreamOptions) {
-      const requestId = crypto.randomUUID()
+      const requestId = opts.requestId || crypto.randomUUID()
       const reply = `（浏览器预览模式：未连接真实 API。请在桌面应用中配置 API Key 后使用。\n\n收到 ${opts.messages.length} 条消息，模型：${opts.config.model}）`
       // 逐字推送模拟流式效果
       const chars = Array.from(reply)

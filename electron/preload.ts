@@ -1,6 +1,6 @@
 // Preload 脚本：通过 contextBridge 暴露安全 IPC API
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, type FileFilter, type LlmStreamOptions, type LlmTokenEvent, type LlmDoneEvent, type LlmErrorEvent, type ApiConfigItem, type ApiConfig, type UserProfile, type WrongQuestion, type TaskProgress, type Material } from '../src/shared/types';
+import { IPC, type FileFilter, type LlmStreamOptions, type LlmTokenEvent, type LlmDoneEvent, type LlmErrorEvent, type LlmJsonResponse, type ApiConfigItem, type ApiConfig, type UserProfile, type WrongQuestion, type TaskProgress, type Material } from '../src/shared/types';
 
 const api = {
   // 配置
@@ -64,7 +64,7 @@ const api = {
   llmStream: (opts: LlmStreamOptions) => ipcRenderer.invoke(IPC.LLM_STREAM, opts),
   llmAbort: (requestId: string) => ipcRenderer.invoke(IPC.LLM_ABORT, requestId),
   llmJSON: (opts: LlmStreamOptions) =>
-    ipcRenderer.invoke(IPC.LLM_JSON, opts) as Promise<{ ok: true; content: string } | { ok: false; error: string }>,
+    ipcRenderer.invoke(IPC.LLM_JSON, opts) as Promise<LlmJsonResponse>,
   onLlmToken: (cb: (payload: LlmTokenEvent) => void) => {
     const handler = (_e: unknown, payload: LlmTokenEvent) => cb(payload);
     ipcRenderer.on('llm:token', handler);

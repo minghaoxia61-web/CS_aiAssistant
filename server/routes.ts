@@ -16,9 +16,10 @@ import {
   setActiveConfig,
 } from './config';
 import { parseBuffer, getFileType } from './parsers-server';
-import { streamChat, chatJSON } from '../electron/llm';
+import { streamChat, chatJSON, chatStructuredJSON } from '../electron/llm';
 import { CATALOG } from './knowledge/catalog';
 import { resolveLlmConfig } from './llm-config';
+import { abortOnPrematureResponseClose } from './stream-lifecycle';
 import type {
   ApiConfig,
   ApiConfigItem,
@@ -434,6 +435,25 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
   });
 
   // ---------- LLM 流式调用（SSE） ----------
+  app.get('/api/llm/health', (_req: Request, res: Response) => {
+    const config = getConfig();
+    let provider = 'invalid';
+    try {
+      provider = new URL(config.baseUrl).hostname;
+    } catch {
+      // 仅报告脱敏状态，不向客户端暴露解析错误细节。
+    }
+    res.json({
+      ok: true,
+      provider,
+      model: config.model,
+      deploymentKeyConfigured: Boolean(process.env.LLM_API_KEY),
+      byokSupported: true,
+      structuredRepair: true,
+      streaming: true,
+    });
+  });
+
   app.post('/api/llm/stream', (req: Request, res: Response) => {
     const opts = req.body as LlmStreamOptions & { requestId?: string };
     const requestId = opts.requestId || uuidv4();
@@ -473,6 +493,8 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     }, 15000);
 
     let streamFailed = false;
+    let emittedToken = false;
+    const startedAt = Date.now();
 
     const handle = streamChat(
       {
@@ -484,6 +506,7 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
       },
       {
         onToken: (token) => {
+          emittedToken = true;
           try {
             res.write(`data: ${JSON.stringify({ type: 'token', requestId, token })}\n\n`);
           } catch {
@@ -503,7 +526,8 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
         onError: (message) => {
           console.error(`[LLM] 流式请求失败 ${requestId.slice(0, 8)}: ${message}`);
           // 如果流式失败，尝试非流式作为后备
-          if (!streamFailed && message.includes('socket hang up')) {
+          const retryableBeforeFirstToken = /socket hang up|ECONNRESET|fetch failed|timeout|timed out|429|502|503|504/i.test(message);
+          if (!streamFailed && !emittedToken && retryableBeforeFirstToken) {
             streamFailed = true;
             console.log(`[LLM] 流式失败，尝试非流式后备...`);
             chatJSON({
@@ -519,7 +543,12 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
                 try {
                   // 发送完整内容作为一个 token
                   res.write(`data: ${JSON.stringify({ type: 'token', requestId, token: content })}\n\n`);
-                  res.write(`data: ${JSON.stringify({ type: 'done', requestId, full: content })}\n\n`);
+                  res.write(`data: ${JSON.stringify({
+                    type: 'done',
+                    requestId,
+                    full: content,
+                    meta: { requestId, attempts: 2, repaired: false, latencyMs: Date.now() - startedAt, mode: 'stream_fallback' },
+                  })}\n\n`);
                   res.end();
                 } catch {
                   // 忽略
@@ -551,8 +580,9 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
 
     activeStreams.set(requestId, handle);
 
-    // 客户端断开时中止上游请求
-    req.on('close', () => {
+    // SSE 响应被客户端提前关闭时中止上游请求；不能监听 req.close，
+    // 因为普通 POST 请求体读取完成后也会触发它，导致刚发出的模型请求被误取消。
+    abortOnPrematureResponseClose(res, () => {
       clearInterval(heartbeat);
       handle.abort();
       activeStreams.delete(requestId);
@@ -568,21 +598,50 @@ export function registerRoutes(app: Express, upload: multer.Multer): void {
     res.json({ ok: true });
   });
 
+  app.post('/api/llm/abort', (req: Request, res: Response) => {
+    const requestId = String((req.body as { requestId?: unknown })?.requestId || '');
+    const handle = activeStreams.get(requestId);
+    if (handle) {
+      handle.abort();
+      activeStreams.delete(requestId);
+    }
+    res.json({ ok: true });
+  });
+
   app.post('/api/llm/json', async (req: Request, res: Response) => {
     const opts = req.body as LlmStreamOptions;
     const serverConfig = getConfig();
+    const requestId = uuidv4();
+    const startedAt = Date.now();
     try {
       const config = resolveLlmConfig(serverConfig, opts.config);
-      const content = await chatJSON({
+      const result = await chatStructuredJSON({
         config,
         messages: opts.messages,
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
         stream: false,
+        responseKind: opts.responseKind,
+        expectedItems: opts.expectedItems,
       });
-      res.json({ ok: true, content });
+      const meta = {
+        requestId,
+        attempts: result.attempts,
+        repaired: result.repaired,
+        latencyMs: Date.now() - startedAt,
+        mode: 'json' as const,
+      };
+      res.setHeader('X-LLM-Request-ID', requestId);
+      res.json({ ok: true, content: result.content, meta });
     } catch (e) {
-      res.status(400).json({ ok: false, error: (e as Error).message });
+      const attempts = typeof (e as { attempts?: unknown }).attempts === 'number'
+        ? (e as { attempts: number }).attempts
+        : 1;
+      res.status(400).json({
+        ok: false,
+        error: (e as Error).message,
+        meta: { requestId, attempts, repaired: attempts > 1, latencyMs: Date.now() - startedAt, mode: 'json' },
+      });
     }
   });
 

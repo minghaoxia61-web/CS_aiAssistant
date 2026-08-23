@@ -139,6 +139,8 @@ PDF/DOCX/PPTX 解析、文本分块、向量计算全部在 Web Worker 后台线
 
 访问 [cs-ai-assistant.vercel.app](https://cs-ai-assistant.vercel.app/) → 设置页 → **一键加载示例数据** → 即可体验全部功能。
 
+面试或答辩时可按 [3～5 分钟演示脚本](./DEMO_GUIDE.md) 展示“课件证据问答 → 测验 → 错题 → BKT/Agent 干预”完整闭环。
+
 ### 学习实验室
 
 侧边栏的 **学习实验室** 将资料、问答和测验数据连接成一套可评测的学习闭环：
@@ -155,16 +157,20 @@ PDF/DOCX/PPTX 解析、文本分块、向量计算全部在 Web Worker 后台线
 
 项目将产品内的“当前资料快速自检”与仓库内的“固定人工金标集”分开，避免使用同源自动问题作为唯一评测证据。
 
-- `data/evaluation/rag-gold.json`：16 条人工编写的 v1 定位问题，每条包含目标资料、证据锚点、问题类型和数据来源。
+- `data/evaluation/rag-gold.json`：100 条固定 v2 用例，包括 16 条人工问题、64 条全语料覆盖题、10 条跨资料题和 10 条应拒答题。
+- `data/evaluation/agent-scenarios.json`：12 个固定 Agent 场景，覆盖证据阻断、验证门禁和状态恢复。
 - 消融实验：在完全相同的语料和问题上对比 BM25、N-gram 与词法混合检索。
 - 回归门禁：自动检查证据锚点是否失效，并在 Hit@3 或 MRR 明显下降时使测试失败。
 - 排名口径：MRR 使用检索器原始分数排名，不使用为展示而重新排序的结果。
 
 ```bash
 npm run benchmark:rag
+npm run benchmark:agent
+npm run benchmark:bkt
+npm run benchmark:llm
 ```
 
-v1 金标集用于小型内置知识库的稳定性回归，不代表对任意课件的泛化结论。后续版本将增加跨章节、低词汇重叠、否定前提与应拒答问题。
+v2 基准在当前语料上记录 Hit@K、MRR、Recall@5、nDCG@5、拒答准确率和可回答性判断。它用于小型内置知识库的稳定性回归，不代表对任意课件的泛化结论；其中覆盖题来自固定模板并经过结构化整理，不能冒充完全独立的人类测试集。
 
 ### BKT 长期知识追踪
 
@@ -174,9 +180,10 @@ v1 金标集用于小型内置知识库的稳定性回归，不代表对任意�
 - 因果顺序：每次作答先用当前状态预测答对概率，再根据结果进行贝叶斯更新和学习转移。
 - 基线对照：保留原有的近期加权正确率，在相同时序作答序列上对比 Brier Score、Log Loss、准确率和 ECE 校准误差。
 - 无泄漏评测：第 `t` 次作答的预测只允许访问 `t` 之前的记录，当前答案只用于之后的模型更新。
+- 数据拟合：同一知识点最后 20% 作答作为时间留出集，使用受约束的确定性坐标搜索估计全局 BKT 参数；训练少于 20 条、验证少于 5 条或留出集 Log Loss 未改善时自动回退默认参数。
 - 决策接入：自适应练习和下一题难度优先使用 BKT 掌握概率；原模型继续负责粗心、概念混淆、知识缺口和遗忘的错因分类。
 
-当作答样本很少时，页面会照实显示两种模型的实际指标，不预设 BKT 一定优于基线。
+`npm run benchmark:bkt` 使用固定随机种子的合成学习序列验证拟合、留出评测和回退机制。合成基准只证明实现能够恢复更合适的预测参数，不代表真实学生学习效果。作答样本很少时，页面会照实显示回退状态，不预设 BKT 一定优于基线。
 
 ### 可观察学习 Agent
 
@@ -212,6 +219,22 @@ npm run build:web
 npm run start:web
 ```
 
+提交前建议运行完整质量门禁：
+
+```bash
+npm test
+npm run check
+npm run lint
+npm run benchmark:rag
+npm run benchmark:agent
+npm run benchmark:bkt
+npm run benchmark:llm
+npm run scan:secrets
+npm run check:bundle
+npm run build:web
+npm run smoke:production
+```
+
 ### 稳定演示数据
 
 设置页的“加载示例数据”会优先解析真实 PDF。如果静态资源在部署中缺失、返回 404、文件为空或解析器不可用，加载器会自动使用仓库内可版本化的四份 Markdown 课件。
@@ -234,11 +257,20 @@ npm run audit:secrets-history
 
 支持任何 OpenAI 兼容接口：
 - **智谱 GLM**（推荐，免费额度）：`https://open.bigmodel.cn/api/paas/v4`
-- **DeepSeek**：`https://api.deepseek.com/v1`
+- **DeepSeek**：`https://api.deepseek.com`，默认模型 `deepseek-v4-flash`
 - **OpenAI**：`https://api.openai.com/v1`
 - **通义千问**：`https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **Pollinations**：`https://gen.pollinations.ai/v1`（当前版本同样需要 API Key）
 
 在设置页添加配置，输入 API Key 即可。部署环境配置的 `LLM_API_KEY` 优先；未配置时支持 BYOK，浏览器密钥只随当前 HTTPS 模型请求转发，不在服务端持久化。模型代理默认只允许受信任的公开提供商域名，额外域名需通过 `LLM_ALLOWED_HOSTS` 显式加入。
+
+真实模型链路提供以下可靠性约束：
+
+- 出题、批改、速记卡和语义图谱使用共享结构化校验器，拒绝缺字段、非法枚举和越界分数。
+- 首次结构不合法时，将具体校验错误反馈给同一模型并以温度 `0` 修复一次；第二次仍失败则明确报错，不把残缺数据写入业务库。
+- 流式请求在首个 token 前遇到网络、超时、限流或上游 5xx 时，可降级为一次非流式请求；已经输出 token 后不重复降级，避免回答内容重复。
+- JSON 调用返回请求 ID、耗时、尝试次数和自动修复标记；设置页仅在本机汇总成功率、修复数和平均延迟，不保存提示词、回答或密钥。
+- `npm run benchmark:llm` 使用 8 个固定故障注入场景验证接受、修复和拒绝路径。它验证协议层可靠性，不代表模型答案质量。
 
 ### 可选账号与云同步
 
@@ -266,8 +298,8 @@ npm run audit:secrets-history
 | 可选云同步 | Supabase Auth + PostgreSQL RLS |
 | 异步计算 | Web Worker + Worker 池 |
 | PWA | Service Worker + Web App Manifest |
-| 后端 | Express + Multer（纯 LLM 代理） |
-| 部署 | Vercel（前端 + 静态知识 API）；Express/Railway 模型代理可选 |
+| 后端 | Express + Vercel Node Functions（LLM 代理） |
+| 部署 | Vercel（前端 + 静态知识 API + LLM 流式/结构化代理） |
 
 ## 项目结构
 
@@ -296,7 +328,7 @@ src/
 
 ## 部署
 
-### Railway 部署
+### 可选 Railway 部署
 
 1. Fork 本仓库
 2. 在 Railway 中创建新项目，连接 GitHub 仓库
@@ -305,9 +337,19 @@ src/
 5. 添加环境变量：`NODE_ENV=production`、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`
 6. 如需允许额外的 OpenAI 兼容域名，配置逗号分隔的 `LLM_ALLOWED_HOSTS`
 
-### Vercel 前端部署
+### Vercel 部署
 
-仓库包含 `vercel.json`，连接 GitHub 后会自动构建前端与只读静态知识 API。在线演示的 RAG、BKT 和 Agent 闭环在浏览器本地运行；真实 LLM 转发需额外部署 Express 服务。启用云同步时，同时在 Vercel 配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`。
+仓库包含 `vercel.json` 及 `api/llm/*.ts` Node Function 入口，连接 GitHub 后会同时部署前端、静态知识 API 与 LLM 代理。
+
+推荐在 Vercel 项目设置中添加以下环境变量：
+
+```text
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-flash
+LLM_API_KEY=在 Vercel 后台填写，不要提交到仓库
+```
+
+未配置服务端 Key 时仍可使用 BYOK：用户在设置页创建 DeepSeek 配置，Key 只随当前 HTTPS 请求发送给代理，不持久化到服务端。访问 `/api/llm/health` 可检查代理、流式输出和结构化修复能力是否已部署。启用云同步时，再配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`。
 
 ### 本地 Electron 桌面应用
 
