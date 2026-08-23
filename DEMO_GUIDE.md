@@ -38,7 +38,7 @@ observe → diagnose → ground → intervene → verify → update → schedule
 ### 4. 工程能力收尾（约 30 秒）
 
 - 说明项目支持 Web、PWA 和 Electron，本地数据使用 IndexedDB，服务端只代理模型请求。
-- 展示 47 项自动化测试、100 条 RAG 固定评测、12 条 Agent 场景及四套 Benchmark。
+- 展示 48 项自动化测试、100 条 RAG 固定评测、12 条 Agent 场景及四套 Benchmark。
 
 ## 一句话总结
 
