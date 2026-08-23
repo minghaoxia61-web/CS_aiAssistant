@@ -13,7 +13,7 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 | RAG | BM25 + 向量混合检索，主要依赖自动生成评测 | 100 条固定评测集、跨资料与拒答题、BM25/N-gram/混合消融、Hit@K/MRR/Recall/nDCG 回归门禁 |
 | 学生模型 | 近期加权正确率和规则掌握度 | 可拟合 BKT、时间留出验证、自动回退、下一题预测及 Brier/Log Loss/ECE 对照 |
 | Agent | 规则触发的通知和页面跳转 | 可持久的 7 步状态机，可观察证据、诊断、干预、验证、更新与调度 |
-| LLM 工程 | 直接解析模型字符串，格式错误由页面兜底 | Vercel Node Function 模型代理、四类结构化 Schema 校验、单次低温修复、流式降级及本地可靠性指标 |
+| LLM 工程 | 直接解析模型字符串，格式错误由页面兜底 | DeepSeek V4 接入、Vercel 原生 Node Function、四类结构化 Schema 校验、单次低温修复、SSE 流式降级及本地可靠性指标 |
 | 安全 | 当前代码已改用环境变量 | 当前树密钥扫描纳入 CI，提供不打印密钥的 Git 历史审计 |
 | 演示 | 依赖 4 份静态 PDF，缺失时资料失败 | PDF 解析失败时自动回退到四份内置课件，闭环集成测试保证可演示 |
 | 工程 | 单元测试、TypeScript、Lint、构建 | 48 项测试 + RAG/Agent/BKT/LLM Benchmark + 密钥扫描 + 体积预算 + 生产服务冒烟测试 |
@@ -28,6 +28,8 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 - Express 模型代理、Supabase 可选同步、PWA/Electron/Web 多端。
 - 结构化 LLM 输出校验与单次修复、流式到非流式安全降级、本地调用可靠性统计。
 - Vercel 托管前端、静态知识 API 与流式/结构化 LLM Node Function；Web 学习数据保存在浏览器 IndexedDB，模型密钥使用部署环境变量或单次 BYOK 转发。
+- DeepSeek `deepseek-v4-flash` 同时支持 JSON 与 SSE 流式调用；客户端预生成请求 ID，避免快速错误事件丢失，并使用响应关闭事件准确取消上游请求。
+- Serverless 模型接口使用原生 Node 处理器和显式 ESM 模块扩展名，解决 Vercel 冷启动、模块追踪和 Function Invocation Failed 问题。
 
 ## 4. 可复现结果
 
@@ -38,7 +40,8 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 - LLM 代理集成测试：健康检查只返回供应商、模型和能力状态，不泄露 Key；无密钥请求会在访问上游前安全拒绝。
 - 自动化测试：48 项通过；包含浏览器流式错误竞态、SSE 上游误取消与 Serverless 冷启动回归测试。
 - 质量门禁：TypeScript、ESLint、生产构建、密钥扫描、构建体积和生产路由冒烟测试。
-- 真实模型联调：本地通过 DeepSeek `deepseek-v4-flash` 完成流式连接、对话和业务功能验证。
+- 真实模型联调：本地与 Vercel 生产环境均通过 DeepSeek `deepseek-v4-flash` 完成验证。
+- 线上验收：主页、知识目录和 LLM 健康检查均返回 200；真实 JSON 请求返回 `OK`，单次验收耗时约 903ms；SSE 请求完整收到 `init → token → done`。
 
 ## 5. 简历写法
 
@@ -49,6 +52,7 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 - 实现可拟合 BKT 知识追踪，按知识点时间留出验证并在样本不足或预测未改善时自动回退，用 Brier Score、Log Loss 和 ECE 驱动模型选择与学习计划。
 - 构建 observe→diagnose→ground→intervene→verify→update→schedule 可观察 Agent，实现无证据阻断和未验证不更新掌握度的安全约束。
 - 为出题、批改、速记卡和知识图谱建立结构化输出校验与自动修复协议，加入流式故障降级和不记录内容的本地可靠性指标。
+- 将 DeepSeek V4 模型代理部署为 Vercel 原生 Node Function，修复请求 ID 竞态、SSE 上游误取消及 ESM 冷启动问题，并完成 JSON/流式生产联调。
 - 建立 48 项自动化测试及 CI 质量门禁，覆盖 RAG、BKT 拟合、Agent、LLM 故障注入、流式生命周期、Serverless 冷启动、密钥扫描、体积预算和生产冒烟测试。
 
 ## 6. 客观评价
@@ -61,7 +65,7 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 - Agent 的 12 个场景是合成测试，还不能替代真实学习过程中的错误干预率统计。
 - BKT 已支持从个人历史中拟合并做时间留出验证，但目前只有合成校准基准，缺少多学生真实数据，参数可辨识性和跨学生泛化仍未验证。
 - 没有真实用户对照实验，因此不能声称已提高学习成绩或记忆保留率。
-- 本地真实模型链路已经验证；线上默认可使用 BYOK。若要提供无需用户配置的公共演示，仍需由项目所有者在 Vercel 后台设置 `LLM_API_KEY`，密钥不能写入仓库。
+- 本地与线上真实模型链路均已验证，Vercel 已配置部署级 Key，同时保留 BYOK 能力；仍需持续关注供应商额度、密钥轮换、延迟和调用成本。
 - LLM 故障基准使用固定模拟响应，能够验证协议和校验逻辑，但不能替代不同模型供应商的长期成功率、延迟与成本测试。
 - Git 历史审计命中 5 个旧提交，必须确认相关旧 Key 已在服务商后台撤销；重写历史需要与协作者单独协调。
 
@@ -70,6 +74,7 @@ CS_Assistant 是一个面向计算机专业学习的本地优先 AI 复习系统
 ## 7. 交付清单
 
 - 在线地址：<https://cs-ai-assistant.vercel.app/>
+- 生产模型：DeepSeek `deepseek-v4-flash`；健康检查、JSON 与 SSE 流式接口均已通过真实请求验收。
 - 固定演示：设置页“一键加载示例数据”，静态 PDF 缺失时自动回退内置课件。
 - 演示脚本：[DEMO_GUIDE.md](./DEMO_GUIDE.md)
 - 部署方式：GitHub 推送触发 Vercel；无服务端 Key 时使用用户自己的 BYOK 配置。
