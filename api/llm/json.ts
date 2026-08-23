@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { chatStructuredJSON } from '../../electron/llm'
+import { resolveLlmConfig } from '../../server/llm-config'
 import type { ApiConfig, LlmStreamOptions } from '../../src/shared/types'
 
 interface FunctionRequest extends IncomingMessage { body?: unknown }
@@ -33,10 +35,6 @@ export default async function handler(req: FunctionRequest, res: ServerResponse)
   const requestId = randomUUID()
   const startedAt = Date.now()
   try {
-    const [{ chatStructuredJSON }, { resolveLlmConfig }] = await Promise.all([
-      import('../../electron/llm'),
-      import('../../server/llm-config'),
-    ])
     const opts = await readBody(req)
     const config = resolveLlmConfig(deploymentConfig(), opts.config)
     const result = await chatStructuredJSON({

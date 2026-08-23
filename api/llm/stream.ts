@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { chatJSON, streamChat } from '../../electron/llm'
+import { resolveLlmConfig } from '../../server/llm-config'
 import type { ApiConfig, LlmStreamOptions } from '../../src/shared/types'
 
 interface FunctionRequest extends IncomingMessage { body?: unknown }
@@ -27,10 +29,6 @@ export default async function handler(req: FunctionRequest, res: ServerResponse)
   let handle: { abort: () => void } | undefined
   let heartbeat: ReturnType<typeof setInterval> | undefined
   try {
-    const [{ streamChat, chatJSON }, { resolveLlmConfig }] = await Promise.all([
-      import('../../electron/llm'),
-      import('../../server/llm-config'),
-    ])
     const opts = await readBody(req)
     const requestId = opts.requestId || randomUUID()
     const config = resolveLlmConfig(deploymentConfig(), opts.config)
