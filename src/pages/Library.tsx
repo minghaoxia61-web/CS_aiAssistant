@@ -267,7 +267,7 @@ export default function Library() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
         {/* 上传引导区（支持拖拽图片） */}
         <button
           onClick={handleUpload}

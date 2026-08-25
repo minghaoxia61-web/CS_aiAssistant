@@ -184,7 +184,7 @@ export default function WrongBook() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
         <SpacedReviewQueue questions={wrongQuestions} onUpdated={refresh} />
         {/* 统计概览 */}
         <div className="grid grid-cols-4 gap-3 mb-6">

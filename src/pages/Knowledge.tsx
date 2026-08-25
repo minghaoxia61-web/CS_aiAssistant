@@ -207,7 +207,7 @@ export default function Knowledge() {
             <span>沉浸阅读</span>
           </div>
         </div>
-        <div className="px-10 py-8">
+        <div className="px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
         {loadingContent ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />

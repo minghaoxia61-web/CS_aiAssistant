@@ -342,7 +342,7 @@ export default function Setup() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-8 py-10 animate-fade-in">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8 animate-fade-in">
         {/* 顶栏 */}
         <div className="flex items-center gap-3 mb-8">
           <button className="btn-ghost !px-2" onClick={() => navigate('/chat')}>

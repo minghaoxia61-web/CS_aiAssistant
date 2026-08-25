@@ -37,7 +37,7 @@ export default function Profile() {
         subtitle="编辑你的学习信息，AI 对话时会参考这些内容个性化回答"
         icon={<User className="w-5 h-5" />}
       />
-      <div className="max-w-2xl mx-auto px-8 py-6 animate-fade-in">
+      <div className="max-w-2xl mx-auto px-4 py-5 sm:px-6 lg:px-8 animate-fade-in">
         {cloudSyncConfigured ? (
           <Suspense fallback={<div className="panel p-4 mb-5 text-xs text-bone-muted">正在加载云同步…</div>}>
             <CloudSyncCard />

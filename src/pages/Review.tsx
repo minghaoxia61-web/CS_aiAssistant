@@ -113,7 +113,7 @@ export default function Review() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧历史 */}
-        <div className="w-64 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 glass-sidebar">
+        <div className="hidden md:block w-56 shrink-0 border-r border-amber/8 overflow-y-auto px-3 py-4 glass-sidebar">
           <span className="label px-2">已生成资料</span>
           <div className="space-y-1 mt-2">
             {docs.length === 0 && <p className="px-2 text-xs text-bone-faint">暂无生成记录</p>}
@@ -149,7 +149,7 @@ export default function Review() {
         </div>
 
         {/* 主区 */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
           {/* 资料选择 + 生成按钮 */}
           <div className="panel card-3d p-5 mb-6">
             <div className="flex items-center justify-between mb-3">

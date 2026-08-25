@@ -154,7 +154,7 @@ export default function Analytics() {
         icon={<BarChart3 className="w-5 h-5" />}
       />
 
-      <div className="px-8 py-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+      <div className="px-4 py-5 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-5 animate-fade-in">
         {/* SOLO Agent 主动建议 */}
         {agentSuggestions.length > 0 && (
           <div className="rounded-2xl glass border border-amber/15 p-5">

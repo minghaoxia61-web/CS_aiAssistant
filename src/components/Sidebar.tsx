@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
   Beaker,
@@ -10,12 +10,8 @@ import {
   Library,
   ListChecks,
   MessagesSquare,
-  Moon,
   Plus,
   Settings,
-  Sparkles,
-  Sun,
-  User,
   Users,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -35,17 +31,13 @@ const NAV = [
   { to: '/teacher', label: '教师工作台', description: '班级、任务与学情', icon: Users },
 ]
 
-export default function Sidebar({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
-  const navigate = useNavigate()
+export default function Sidebar({ className, collapsed, onNavigate }: { className?: string; collapsed?: boolean; onNavigate?: () => void }) {
   const {
     subjects,
     currentSubjectId,
     selectSubject,
     deleteSubject,
     createSubject,
-    theme,
-    toggleTheme,
-    profile,
   } = useStore()
 
   const createNewSubject = async () => {
@@ -54,39 +46,8 @@ export default function Sidebar({ className, onNavigate }: { className?: string;
   }
 
   return (
-    <aside className={cn('app-sidebar w-[268px] shrink-0 h-full flex flex-col overflow-hidden', className)}>
-      <div className="px-5 pt-5 pb-4 shrink-0">
-        <div className="flex items-center gap-3.5">
-          <div className="brand-mark">
-            <GraduationCap className="w-5 h-5" strokeWidth={2.1} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-display text-[17px] leading-none text-bone tracking-[-0.03em]">
-              CS Assistant
-            </h1>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="status-dot" />
-              <p className="text-[10px] uppercase tracking-[0.14em] text-bone-faint font-mono">
-                Learning workspace
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-4 rounded-2xl p-3.5 sidebar-focus-card">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-xl bg-amber/12 text-amber flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-bone-faint mb-1">今日学习建议</p>
-            <p className="text-[13px] text-bone leading-snug">从薄弱知识点开始，完成一次专注复习。</p>
-          </div>
-        </div>
-      </div>
-
-      <nav className="px-3 mt-4 space-y-1 shrink-0" aria-label="主导航">
+    <aside className={cn('app-sidebar w-[224px] shrink-0 h-full flex flex-col overflow-hidden', collapsed && 'app-sidebar-collapsed', className)}>
+      <nav className="px-3 pt-4 space-y-1" aria-label="主导航">
         <p className="sidebar-section-label">学习空间</p>
         {NAV.map((item) => {
           const Icon = item.icon
@@ -106,7 +67,7 @@ export default function Sidebar({ className, onNavigate }: { className?: string;
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[13px] font-medium leading-tight">{item.label}</span>
-                    <span className="block text-[10px] text-bone-faint mt-0.5 leading-tight">
+                    <span className="sidebar-nav-description block text-[10px] text-bone-faint mt-0.5 leading-tight">
                       {item.description}
                     </span>
                   </span>
@@ -177,25 +138,10 @@ export default function Sidebar({ className, onNavigate }: { className?: string;
       </div>
 
       <div className="p-3 shrink-0">
-        <div className="sidebar-profile-card">
-          <button className="flex items-center gap-3 flex-1 min-w-0 text-left" onClick={() => navigate('/profile')}>
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber/20 to-sage/15 border border-white/5 flex items-center justify-center text-amber shrink-0">
-              <User className="w-4 h-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12px] font-medium text-bone truncate">
-                {profile?.nickname || '学习者'}
-              </span>
-              <span className="block text-[10px] text-bone-faint mt-0.5">查看个人学习档案</span>
-            </span>
-          </button>
-          <button className="icon-button !w-8 !h-8" onClick={toggleTheme} title="切换主题" aria-label="切换主题">
-            {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-          </button>
-          <button className="icon-button !w-8 !h-8" onClick={() => navigate('/setup')} title="设置" aria-label="设置">
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <NavLink to="/setup" onClick={onNavigate} className={({ isActive }) => cn('sidebar-settings-link', isActive && 'sidebar-settings-link-active')}>
+          <span className="sidebar-nav-icon"><Settings className="w-[17px] h-[17px]" strokeWidth={1.8} /></span>
+          <span>设置</span>
+        </NavLink>
       </div>
     </aside>
   )
